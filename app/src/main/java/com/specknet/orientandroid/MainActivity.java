@@ -3,6 +3,7 @@ package com.specknet.orientandroid;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -17,6 +18,10 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.Viewport;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 import com.opencsv.CSVWriter;
 import com.polidea.rxandroidble2.RxBleClient;
 import com.polidea.rxandroidble2.RxBleDevice;
@@ -45,7 +50,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     // test device - replace with the real BLE address of your sensor, which you can find
     // by scanning for devices with the NRF Connect App
 
-    private static final String ORIENT_BLE_ADDRESS = "D5:71:F3:51:9E:73";
+    private static final String ORIENT_BLE_ADDRESS = "D4:A3:C2:EC:49:18";
 
     private static final String ORIENT_QUAT_CHARACTERISTIC = "00001526-1212-efde-1523-785feabcd125";
     private static final String ORIENT_RAW_CHARACTERISTIC = "ef680406-9b35-4933-9b10-52ffa9740042";
@@ -98,14 +103,26 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     private RadioGroup stepsRadioGroup;
     private RadioGroup mountingRadioGroup;
 
+    private LineGraphSeries<DataPoint> seriesX;
+    private GraphView graph;
+    private int inputCounter = 0;
     private final int RC_LOCATION_AND_STORAGE = 1;
-
+    private StepCounter sc = new StepCounter(4,0.3,20,0);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ctx = this;
+        graph = (GraphView) findViewById(R.id.graph);
+        Viewport vp = graph.getViewport();
+        vp.setXAxisBoundsManual(true);
+        vp.setMinX(0);
+        vp.setMaxX(100);
+        vp.setScalable(true);
 
+        seriesX = new LineGraphSeries<>();
+        seriesX.setColor(Color.BLUE);
+        graph.addSeries(seriesX);
         getPermissions();
     }
 
@@ -384,6 +401,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
                         throwable -> {
                             // Handle an error here.
                             Log.e("OrientAndroid", "Error: " + throwable.toString());
+                            throwable.printStackTrace();
                         }
                 );
     }
@@ -441,8 +459,14 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
                     Float.toString(gyro_y),
                     Float.toString(gyro_z),
             };
+            double mag = Math.sqrt(Math.pow(accel_x, 2) + Math.pow(accel_y, 2) + Math.pow(accel_z, 2));
+            sc.stepDetection(mag, (double) System.currentTimeMillis());
+            Log.d("STEP", ""+sc.getCount());
             writer.writeNext(entries);
-
+            if (counter % 4 == 0) {
+                seriesX.appendData(new DataPoint(inputCounter, mag),true,100);
+                inputCounter+=1;
+            }
             if (counter % 12 == 0) {
                 long elapsed_time = System.currentTimeMillis() - capture_started_timestamp;
                 int total_secs = (int)elapsed_time / 1000;
@@ -470,6 +494,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
                 String accel_str = "Accel: (" + accel_x + ", " + accel_y + ", " + accel_z + ")";
                 String gyro_str = "Gyro: (" + gyro_x + ", " + gyro_y + ", " + gyro_z + ")";
                 String freq_str = "Freq: " + freq;
+                Log.d("ACC", accel_str);
 
                 runOnUiThread(() -> {
                     captureTimetextView.setText(time_str);

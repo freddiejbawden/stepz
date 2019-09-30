@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".MainActivity">
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/label1"
@@ -13,6 +18,13 @@
         android:layout_marginStart="16dp"
         android:text="Group"
         android:textStyle="bold" />
+
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
 
     <Spinner
         android:id="@+id/groupSpinner"
@@ -276,17 +288,16 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal" >
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/start_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:enabled="false"
-            android:text="Start"
-            android:layout_marginRight="50dp"
             android:layout_marginLeft="60dp"
-            />
+            android:layout_marginRight="50dp"
+            android:enabled="false"
+            android:text="Start" />
 
         <Button
             android:id="@+id/stop_button"
@@ -296,4 +307,16 @@
             android:text="Stop" />
 
     </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.jjoe64.graphview.GraphView
+            android:id="@+id/graph"
+            android:layout_width="match_parent"
+            android:layout_height="500dp" />
+    </LinearLayout>
+
 </LinearLayout>
+</ScrollView>
