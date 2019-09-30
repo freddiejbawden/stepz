@@ -75,6 +75,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
 
     private Button start_button;
     private Button stop_button;
+    private Button step_on_off_button;
     private Context ctx;
     private TextView captureTimetextView;
     private TextView accelTextView;
@@ -107,7 +108,8 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     private GraphView graph;
     private int inputCounter = 0;
     private final int RC_LOCATION_AND_STORAGE = 1;
-    private StepCounter sc = new StepCounter(4,0.3,20,0);
+    private StepCounter sc = new StepCounter(2.75,0.3333,20,10);
+    private boolean stepSwitch = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -151,7 +153,13 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
 
     private void runApp() {
         path = Environment.getExternalStorageDirectory();
-
+        step_on_off_button = (Button) findViewById(R.id.onOff);
+        step_on_off_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                stepSwitch = !stepSwitch;
+            }
+        });
         start_button = findViewById(R.id.start_button);
         stop_button = findViewById(R.id.stop_button);
         captureTimetextView = findViewById(R.id.captureTimetextView);
@@ -460,10 +468,14 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
                     Float.toString(gyro_z),
             };
             double mag = Math.sqrt(Math.pow(accel_x, 2) + Math.pow(accel_y, 2) + Math.pow(accel_z, 2));
-            sc.stepDetection(mag, (double) System.currentTimeMillis());
+            if (stepSwitch) {
+                sc.stepDetection(mag, (double) System.currentTimeMillis());
+
+            }
             Log.d("STEP", ""+sc.getCount());
+
             writer.writeNext(entries);
-            if (counter % 4 == 0) {
+            if (counter % 4 == 0 && stepSwitch) {
                 seriesX.appendData(new DataPoint(inputCounter, mag),true,100);
                 inputCounter+=1;
             }

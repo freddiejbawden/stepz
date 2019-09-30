@@ -12,11 +12,10 @@ public class StepCounter{
     private double alpha;
     private double beta;
     private int k;
-    private int t;
-
+    private int m;
     private ArrayList<Double> step_mid_points = new ArrayList<>();
-    private Double last_peak = 0.0;
-    private Double last_valley = 0.0;
+    private Double last_peak = null;
+    private Double last_valley = null;
     private ArrayList<Double> time_between_peaks = new ArrayList<>();
     private Double peak_threshold = 0.0;
     private ArrayList<Double> time_between_valleys = new ArrayList<>();
@@ -37,11 +36,11 @@ public class StepCounter{
 
 
 
-    public StepCounter(double alpha, double beta,int k, int t) {
+    public StepCounter(double alpha, double beta,int k, int m) {
         this.alpha = alpha;
         this.beta = beta;
         this.k = k;
-        this.t = t;
+        this.m = m;
     }
 
     public Double stepAverage(Double mean_a, Double std_a, int sign) {
@@ -49,8 +48,7 @@ public class StepCounter{
         Log.d("STEPS", "STD: " + std_a);
 
 
-        double out = mean_a + sign*std_a;
-        if (out == NaN) return 0.0;
+        double out = mean_a + sign*std_a/this.alpha;
         return out;
 
     }
@@ -69,6 +67,9 @@ public class StepCounter{
 
     public static double sd (List<Double> table, Double mean_a)
     {
+        if (table.size() == 0) {
+            return 0;
+        }
         // Step 1:
         double temp = 0;
 
@@ -102,11 +103,18 @@ public class StepCounter{
         Log.d("STEP", "Step Avg: "+stepAverage(mean_a, std_a, 1));
         Log.d("STEP" , "Max: " + Math.max(Math.max(prev,future),stepAverage(mean_a, std_a, 1)));
         Log.d("STEP" , "Min: " + Math.min(Math.min(prev,future),stepAverage(mean_a, std_a, -1)));
-
         if (current>Math.max(Math.max(prev,future),stepAverage(mean_a, std_a, 1))) {
             step_c = 1;
-        } else if (current<Math.min(Math.min(prev,future),stepAverage(mean_a, std_a, -1))) {
-            step_c = -1;
+            return step_c;
+        }
+        if (stepAverage(mean_a, std_a, -1) == 0.0) {
+            if (current<Math.min(prev,future)) {
+                step_c = -1;
+            }
+        } else {
+            if (current < Math.min(Math.min(prev, future), stepAverage(mean_a, std_a, -1))) {
+                step_c = -1;
+            }
         }
         return step_c;
     }
@@ -117,7 +125,7 @@ public class StepCounter{
 
     public void updatePeakThresh() {
         ArrayList<Double> time_diff = new ArrayList<>();
-        for (int i=1;i<time_between_peaks.size();i++) {
+        for (int i=time_between_peaks.size()-1;i>time_between_peaks.size()-this.m && i >= 1;i--) {
             time_diff.add(time_between_peaks.get(i)-time_between_peaks.get(i-1));
         }
         double mean_t = calculateAverage(time_diff);
@@ -126,7 +134,7 @@ public class StepCounter{
 
     public void updateValleyThresh() {
         ArrayList<Double> time_diff = new ArrayList<>();
-        for (int i=1;i<time_between_valleys.size();i++) {
+        for (int i=time_between_peaks.size()-1;i>=time_between_valleys.size()-this.m && i>=1;i--) {
             time_diff.add(time_between_valleys.get(i)-time_between_valleys.get(i-1));
         }
         double mean_t = calculateAverage(time_diff);
@@ -180,9 +188,9 @@ public class StepCounter{
                 updateValleyThresh();
                 count += 1;
                 step_mid_points.add(step_midPoint_calc());
-                int k_adjust = step_mid_points.size() - this.k;
-                double mean_a = calculateAverage(step_mid_points.subList(k_adjust, step_mid_points.size()));
-                double std_a = sd(step_mid_points.subList(k_adjust, step_mid_points.size()), mean_a);
+
+                double mean_a = calculateAverage(step_mid_points);
+                double std_a = sd(step_mid_points, mean_a);
 
                 step_avg_arr.add(stepAverage(mean_a, std_a, 1));
 
