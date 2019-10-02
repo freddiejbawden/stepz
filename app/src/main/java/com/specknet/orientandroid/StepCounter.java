@@ -228,32 +228,45 @@ public class StepCounter{
      * @return the current step count
      */
     public int stepDetection(Double new_step, Double timestamp) {
+
+        // If there has not been enough data yet, skip analysis
         step_data.add(new_step);
         if (step_data.size() < 3) {
             val_count += 1;
             return count;
         }
+
+        // Get step N-1 and catagorise it
         Double step_being_analysed = step_data.get(step_data.size() - 2);
         int step_candidate = detectCandidate();
         Log.d("STEP", "Candidate " + step_candidate);
+
+        //If it is a peak
         if (step_candidate == 1) {
             if (last_peak == null) {
+                // If it is the first ever peak, add it to our collections and update
                 step_classifications.add(1);
                 time_between_peaks.add(timestamp);
                 updatePeak(step_being_analysed, timestamp);
             } else if (step_classifications.get(step_classifications.size() - 1) == -1 && (timestamp - time_between_peaks.get(time_between_peaks.size() - 1)) > peak_threshold) {
+                // If the last classification was a valley and there has been enough time between
+                // the peaks, then update
                 step_classifications.add(1);
                 time_between_peaks.add(timestamp);
                 step_mid_points.add(step_midPoint_calc());
             } else if ((step_classifications.get(step_classifications.size() - 1) == 1 && (timestamp - time_between_peaks.get(time_between_peaks.size() - 1)) < peak_threshold && step_being_analysed > last_peak)) {
+                // If we have found a peak and the previous value was a smaller peak, and we haven't
+                // passed enough time for a new one, update the peak
                 updatePeak(step_being_analysed, timestamp);
-
             }
         } else if (step_candidate == -1) {
             if (last_valley == null) {
+                // If it is the first ever valley, add it to our collections and update
                 time_between_valleys.add(timestamp);
                 updateValley(step_being_analysed, timestamp);
             } else if (step_classifications.get(step_classifications.size() - 1) == 1 && (timestamp - time_between_valleys.get(time_between_valleys.size() - 1)) >= valley_threshold) {
+                // If the last value was a peak and there has been enough time sincet the last valley
+                // update and increment the step count
                 step_classifications.add(-1);
                 updateValley(step_being_analysed, timestamp);
                 updatePeakThresh();
@@ -277,6 +290,8 @@ public class StepCounter{
                 valleys.add(val);
 
             } else if ((step_classifications.get(step_classifications.size() - 1) == -1 && (timestamp - time_between_peaks.get(time_between_peaks.size() - 1)) <= valley_threshold && step_being_analysed < last_valley)) {
+                // If the last value was a valley and it was lower than the last, and not eneough
+                // time has passed since tthe last one, update the valley with the lower value
                 updateValley(step_being_analysed, timestamp);
                 val_count += 1;
             }
