@@ -7,6 +7,12 @@ import java.util.List;
 
 import static java.lang.Double.NaN;
 
+
+/**
+ * Handles counting the steps the user has taken based on a series of input magnitudes
+ * from the accelerometer
+ *
+ */
 public class StepCounter{
 
     private double alpha;
@@ -30,12 +36,15 @@ public class StepCounter{
     private ArrayList<Double> step_avg_arr = new ArrayList<>();
     private ArrayList<ArrayList<Double>> valleys = new ArrayList<>();
 
-
-
-
-
-
-
+    /**
+     *
+     * @param alpha the constant for step average - modifies how far our threshold should be from
+     *              the mean
+     * @param beta  the constant for the time threshold, modifies how much variance we should
+     *              include
+     * @param k     the number of previous step averages to use when finding mean_a
+     * @param m     the number of previous peaks/valleys to include  when finding the time threshold
+     */
     public StepCounter(double alpha, double beta,int k, int m) {
         this.alpha = alpha;
         this.beta = beta;
@@ -43,7 +52,16 @@ public class StepCounter{
         this.m = m;
     }
 
+    /**
+     *  This function finds the threshold for the step average
+     *
+     * @param mean_a    the step average mean
+     * @param std_a     the step average standard deviation
+     * @param sign      whether to add or subtract the standard deviation
+     * @return          a double containing a threshold for the step average
+     */
     public Double stepAverage(Double mean_a, Double std_a, int sign) {
+
         Log.d("STEPS", "MEANS: " + mean_a);
         Log.d("STEPS", "STD: " + std_a);
 
@@ -53,6 +71,11 @@ public class StepCounter{
 
     }
 
+    /**
+     *  Returns the mean of a List<Double
+     * @param marks A list of values
+     * @return The mean
+     */
     public double calculateAverage(List<Double> marks) {
         Log.d("STEPS", "Marks: " + marks);
         double sum = 0;
@@ -65,6 +88,13 @@ public class StepCounter{
         return sum;
     }
 
+    /**
+     *  Generic function for finding the standard devation of a List<Double>
+     *
+     * @param table     A list of values
+     * @param mean_a    The mean of the values
+     * @return          The standard deviation
+     */
     public static double sd (List<Double> table, Double mean_a)
     {
         if (table.size() == 0) {
@@ -91,6 +121,11 @@ public class StepCounter{
         return Math.sqrt(meanOfDiffs);
     }
 
+    /**
+     * Determines whether step n-1 is a valley, peak or nothing
+     *
+     * @return Returns 1 if peak, -1 if valley, 0 o/w
+     */
     public int detectCandidate() {
         int step_c = 0;
 
@@ -119,10 +154,19 @@ public class StepCounter{
         return step_c;
     }
 
+    /**
+     * Find the mid point of the last_valley and last_peak
+     *
+     * @return  Mid point of last_valley and last_peak
+     */
     public double step_midPoint_calc() {
         return (last_peak + last_valley)/2;
     }
 
+    /**
+     * Updates the time between peaks using the last M values
+     *
+     */
     public void updatePeakThresh() {
         ArrayList<Double> time_diff = new ArrayList<>();
         for (int i=time_between_peaks.size()-1;i>time_between_peaks.size()-this.m && i >= 1;i--) {
@@ -132,6 +176,10 @@ public class StepCounter{
         peak_threshold = mean_t - (sd(time_diff, mean_t)/this.beta);
     }
 
+    /**
+     * Updates the time between valleys using the last M values
+     *
+     */
     public void updateValleyThresh() {
         ArrayList<Double> time_diff = new ArrayList<>();
         for (int i=time_between_peaks.size()-1;i>=time_between_valleys.size()-this.m && i>=1;i--) {
@@ -141,20 +189,44 @@ public class StepCounter{
         valley_threshold = mean_t - (sd(time_diff, mean_t)/this.beta);
     }
 
+    /**
+     * Updates the last_peak and assosiated collections with the new values
+     * @param step  the maginitude of the new peak
+     * @param time  the time (ms) of the last peak (epoch time)
+     */
     public void updatePeak(Double step, Double time) {
         time_between_peaks.add(time);
         last_peak = step;
         peak_idx = val_count;
     }
 
+    /**
+     * Updates the last_valley and assosiated collections with the new values
+     *
+     * @param step the maginitude of the new valley
+     * @param time the time (ms) of the last valley (epoch time)
+     */
     public void updateValley(Double step, Double time) {
         time_between_valleys.add(time);
         last_valley = step;
     }
 
+    /**
+     * Returns the step count
+     * @return Step Count since creation
+     */
     public int getCount() {
         return this.count;
     }
+
+    /**
+     * Feeds new data into the class and calculates if a step has occured, otherwise update
+     * collections
+     *
+     * @param new_step the magnitude of the new step
+     * @param timestamp the time (epoch ms) of the new step
+     * @return the current step count
+     */
     public int stepDetection(Double new_step, Double timestamp) {
         step_data.add(new_step);
         if (step_data.size() < 3) {
