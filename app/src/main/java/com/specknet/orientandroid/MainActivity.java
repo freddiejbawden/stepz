@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
@@ -22,6 +23,7 @@ import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.Viewport;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
+import com.jjoe64.graphview.series.PointsGraphSeries;
 import com.opencsv.CSVWriter;
 import com.polidea.rxandroidble2.RxBleClient;
 import com.polidea.rxandroidble2.RxBleDevice;
@@ -103,13 +105,72 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     private RadioGroup orientationRadioGroup;
     private RadioGroup stepsRadioGroup;
     private RadioGroup mountingRadioGroup;
-
+    private TextView stepView;
     private LineGraphSeries<DataPoint> seriesX;
     private GraphView graph;
     private int inputCounter = 0;
     private final int RC_LOCATION_AND_STORAGE = 1;
-    private StepCounter sc = new StepCounter(2.75,0.3333,20,10);
+    private  ArrayList<Double> mags = new ArrayList<Double>();
+    private int magLimit = 10;
+    private double mean_mag = 1;
+    private  double std_mag = 0.1;
+    private boolean calculateStd = false;
+    private StepCounter sc = new StepCounter(2.75,0.33333,20,10);
     private boolean stepSwitch = false;
+
+    private int numPeaks = 0;
+    private PointsGraphSeries<DataPoint> peakDatapoints;
+
+
+    /**
+     *  Returns the mean of a List<Double
+     * @param marks A list of values
+     * @return The mean
+     */
+    public static double calculateAverage(List<Double> marks) {
+        double sum = 0;
+        if(!marks.isEmpty()) {
+            for (Double mark : marks) {
+                sum += mark;
+            }
+            return sum / marks.size();
+        }
+        return sum;
+    }
+
+    /**
+     *  Generic function for finding the standard devation of a List<Double>
+     *
+     * @param table     A list of values
+     * @param mean_a    The mean of the values
+     * @return          The standard deviation
+     */
+    public static double sd (List<Double> table, Double mean_a)
+    {
+        if (table.size() == 0) {
+            return 0;
+        }
+        // Step 1:
+        double temp = 0;
+
+        for (int i = 0; i < table.size(); i++)
+        {
+            Double val = table.get(i);
+
+            // Step 2:
+            double squrDiffToMean = Math.pow(val - mean_a, 2);
+
+            // Step 3:
+            temp += squrDiffToMean;
+        }
+
+        // Step 4:
+        double meanOfDiffs = (double) temp / (double) (table.size());
+
+        // Step 5:
+        return Math.sqrt(meanOfDiffs);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,10 +182,12 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         vp.setMinX(0);
         vp.setMaxX(100);
         vp.setScalable(true);
-
+        stepView = findViewById(R.id.steps);
         seriesX = new LineGraphSeries<>();
         seriesX.setColor(Color.BLUE);
         graph.addSeries(seriesX);
+        peakDatapoints = new PointsGraphSeries<>();
+        graph.addSeries(peakDatapoints);
         getPermissions();
     }
 
@@ -166,20 +229,11 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         accelTextView = findViewById(R.id.accelTextView);
         gyroTextView = findViewById(R.id.gyroTextView);
         freqTextView = findViewById(R.id.freqTextView);
-        positionSpinner = findViewById(R.id.positionSpinner);
-        groupSpinner = findViewById(R.id.groupSpinner);
-        activitySpinner = findViewById(R.id.activitySpinner);
-        nameEditText = findViewById(R.id.nameEditText);
+
         notesEditText = findViewById(R.id.notesEditText);
 
-        positionSpinner.setOnItemSelectedListener(this);
-        groupSpinner.setOnItemSelectedListener(this);
-        activitySpinner.setOnItemSelectedListener(this);
 
-        sideRadioGroup = findViewById(R.id.radioSide);
-        orientationRadioGroup = findViewById(R.id.radioSide);
-        stepsRadioGroup = findViewById(R.id.radioSteps);
-        mountingRadioGroup = findViewById(R.id.radioMouting);
+
 
         List<String> position_list = new ArrayList<String>();
         position_list.add("---");
@@ -190,131 +244,17 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         position_list.add("Lower Leg");
         position_list.add("Foot");
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, position_list);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        positionSpinner.setAdapter(adapter);
 
-        List<String> group_list = new ArrayList<String>();
-        group_list.add("---");
-        for (char c = 'A'; c <= 'Z'; c++){
-            group_list.add(String.valueOf(c));
-        }
-
-        ArrayAdapter<String> adapter2 = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, group_list);
-        adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        groupSpinner.setAdapter(adapter2);
-
-        List<String> activity_list = new ArrayList<String>();
-        activity_list.add("---");
-        activity_list.add("Walking (level ground)");
-        activity_list.add("Climbing stairs");
-        activity_list.add("Descending stairs");
-        activity_list.add("Running");
-
-        ArrayAdapter<String> adapter3 = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, activity_list);
-        adapter3.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        activitySpinner.setAdapter(adapter3);
 
         start_button.setOnClickListener(v-> {
-
-            if (group_str == null || act_type_str == null || position_str == null || (nameEditText.getText().toString().length() == 0)) {
-                Toast.makeText(this,"Please complete all details",
-                        Toast.LENGTH_SHORT).show();
-            }
-            else {
-                start_button.setEnabled(false);
-
-                name_str = nameEditText.getText().toString();
-                notes_str = notesEditText.getText().toString();
-
-                int selectedId;
-                RadioButton rb;
-
-                selectedId = sideRadioGroup.getCheckedRadioButtonId();
-                rb = findViewById(selectedId);
-                side_str = rb.getText().toString();
-
-                selectedId = orientationRadioGroup.getCheckedRadioButtonId();
-                rb = findViewById(selectedId);
-                orientation_str = rb.getText().toString();
-
-                selectedId = stepsRadioGroup.getCheckedRadioButtonId();
-                rb = findViewById(selectedId);
-                steps_str = rb.getText().toString();
-
-                selectedId = mountingRadioGroup.getCheckedRadioButtonId();
-                rb = findViewById(selectedId);
-                mounting_str = rb.getText().toString();
-
-
-                // make a new filename based on the start timestamp
-                String file_ts = new SimpleDateFormat("yyyyMMdd'T'HHmmss").format(new Date());
-                file = new File(path, "PDIoT_" + group_str + "_" + file_ts + ".csv");
-
-                try {
-                    writer = new CSVWriter(new FileWriter(file), ',');
-                } catch (IOException e) {
-                    Log.e("MainActivity", "Caught IOException: " + e.getMessage());
-                }
-
-                String[] h1 = {"# PDIoT walking data"};
-                writer.writeNext(h1);
-
-                String[] h2 = {"# Start time: " + file_ts};
-                writer.writeNext(h2);
-
-                String[] h3 = {"# Group: " + group_str};
-                writer.writeNext(h3);
-
-                String[] h4 = {"# Subject: " + name_str};
-                writer.writeNext(h4);
-
-                String[] h5 = {"# Activity type: " + act_type_str};
-                writer.writeNext(h5);
-
-                String[] h6 = {"# Sensor position: " + position_str};
-                writer.writeNext(h6);
-
-                String[] h7 = {"# Side of body: " + side_str};
-                writer.writeNext(h7);
-
-                String[] h8 = {"# Sensor mounting: " + mounting_str};
-                writer.writeNext(h8);
-
-                String[] h9 = {"# Number of steps: " + steps_str};
-                writer.writeNext(h9);
-
-                String[] h10 = {"# Notes: " + notes_str};
-                writer.writeNext(h10);
-
-                String[] h11 = {""};
-                writer.writeNext(h11);
-
-                String[] entries = "timestamp#seq#accel_x#accel_y#accel_z#gyro_x#gyro_y#gyro_z".split("#");
-                writer.writeNext(entries);
-
-                logging = true;
-                capture_started_timestamp = System.currentTimeMillis();
-                counter = 0;
-                Toast.makeText(this, "Start logging",
-                        Toast.LENGTH_SHORT).show();
-                stop_button.setEnabled(true);
-            }
+            logging = true;
+            capture_started_timestamp = System.currentTimeMillis();
+            counter = 0;
+            Toast.makeText(this, "Start logging",
+                    Toast.LENGTH_SHORT).show();
+            stop_button.setEnabled(true);
         });
 
-        stop_button.setOnClickListener(v-> {
-            logging = false;
-            stop_button.setEnabled(false);
-            try {
-                writer.flush();
-                writer.close();
-                Toast.makeText(this,"Recording saved",
-                        Toast.LENGTH_SHORT).show();
-            } catch (IOException e) {
-                Log.e("MainActivity", "Caught IOException: " + e.getMessage());
-            }
-            start_button.setEnabled(true);
-        });
 
         packetData = ByteBuffer.allocate(18);
         packetData.order(ByteOrder.LITTLE_ENDIAN);
@@ -468,17 +408,48 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
                     Float.toString(gyro_z),
             };
             double mag = Math.sqrt(Math.pow(accel_x, 2) + Math.pow(accel_y, 2) + Math.pow(accel_z, 2));
+
+            // have we exceeded the threshold?
+            Log.d("STEP", std_mag+"");
             if (stepSwitch) {
+                Log.d("STARTSTOP","start");
+
+                // feed
+                calculateStd = true;
                 sc.stepDetection(mag, (double) System.currentTimeMillis());
+                Log.d("STEP", sc.getPeaks() + "");
+                mags.add(mag);
 
+                //double new_mean_mag = MainActivity.calculateAverage(mags.subList(mags.size() - magLimit, mags.size()));
+                //double new_std_mag = MainActivity.sd(mags.subList(mags.size() - magLimit, mags.size()), new_mean_mag);
+                //if (new_std_mag<=std_mag) {
+                //    calculateStd = false;
+                //    Log.d("STARTSTOP","stop");
+                //}
             }
+            /*
+            if (!calculateStd){
+                // calcualte std
+                if (mags.size() < magLimit) {
+                    mags.add(mag);
+                } else{
+                    mags.add(mag);
+                    mean_mag = MainActivity.calculateAverage(mags.subList(mags.size()-magLimit, mags.size()));
+                    std_mag = MainActivity.sd(mags.subList(mags.size()-magLimit, mags.size()), mean_mag);
+                }
+                if (Math.abs(mag - mean_mag) > std_mag*3) {
+                    calculateStd = true;
+                }
+            }
+            */
             Log.d("STEP", ""+sc.getCount());
-
-            writer.writeNext(entries);
+            stepView.setText("Steps: " + sc.getCount());
             if (counter % 4 == 0 && stepSwitch) {
                 seriesX.appendData(new DataPoint(inputCounter, mag),true,100);
+
                 inputCounter+=1;
             }
+
             if (counter % 12 == 0) {
                 long elapsed_time = System.currentTimeMillis() - capture_started_timestamp;
                 int total_secs = (int)elapsed_time / 1000;

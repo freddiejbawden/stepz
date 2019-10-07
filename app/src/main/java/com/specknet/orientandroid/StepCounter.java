@@ -2,6 +2,9 @@ package com.specknet.orientandroid;
 
 import android.util.Log;
 
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.PointsGraphSeries;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +17,6 @@ import static java.lang.Double.NaN;
  *
  */
 public class StepCounter{
-
     private double alpha;
     private double beta;
     private int k;
@@ -33,9 +35,12 @@ public class StepCounter{
     private ArrayList<ArrayList<Double>> peaks = new ArrayList<>();
     private Integer val_count = 0;
     private Integer peak_idx = 0;
-    private ArrayList<Double> step_avg_arr = new ArrayList<>();
     private ArrayList<ArrayList<Double>> valleys = new ArrayList<>();
 
+
+    ArrayList<ArrayList<Double>> getPeaks() {
+        return peaks;
+    }
     /**
      *
      * @param alpha the constant for step average - modifies how far our threshold should be from
@@ -62,9 +67,6 @@ public class StepCounter{
      */
     public Double stepAverage(Double mean_a, Double std_a, int sign) {
 
-        Log.d("STEPS", "MEANS: " + mean_a);
-        Log.d("STEPS", "STD: " + std_a);
-
 
         double out = mean_a + sign*std_a/this.alpha;
         return out;
@@ -77,7 +79,6 @@ public class StepCounter{
      * @return The mean
      */
     public double calculateAverage(List<Double> marks) {
-        Log.d("STEPS", "Marks: " + marks);
         double sum = 0;
         if(!marks.isEmpty()) {
             for (Double mark : marks) {
@@ -132,12 +133,13 @@ public class StepCounter{
         Double prev = step_data.get(step_data.size()-3);
         Double current = step_data.get(step_data.size()-2);
         Double future = step_data.get(step_data.size()-1);
-        Log.d("STEP", ""+step_mid_points);
-        double mean_a = calculateAverage(step_mid_points);
-        double std_a = sd( step_mid_points, mean_a);
-        Log.d("STEP", "Step Avg: "+stepAverage(mean_a, std_a, 1));
-        Log.d("STEP" , "Max: " + Math.max(Math.max(prev,future),stepAverage(mean_a, std_a, 1)));
-        Log.d("STEP" , "Min: " + Math.min(Math.min(prev,future),stepAverage(mean_a, std_a, -1)));
+        int start = 0;
+        if (step_mid_points.size() > this.k) {
+            start = step_mid_points.size() - this.k;
+        }
+        double mean_a = calculateAverage(step_mid_points.subList(start, step_mid_points.size()));
+        double std_a = sd( step_mid_points.subList(start, step_mid_points.size()), mean_a);
+
         if (current>Math.max(Math.max(prev,future),stepAverage(mean_a, std_a, 1))) {
             step_c = 1;
             return step_c;
@@ -182,7 +184,7 @@ public class StepCounter{
      */
     public void updateValleyThresh() {
         ArrayList<Double> time_diff = new ArrayList<>();
-        for (int i=time_between_peaks.size()-1;i>=time_between_valleys.size()-this.m && i>=1;i--) {
+        for (int i=time_between_valleys.size()-1;i>=time_between_valleys.size()-this.m && i>=1;i--) {
             time_diff.add(time_between_valleys.get(i)-time_between_valleys.get(i-1));
         }
         double mean_t = calculateAverage(time_diff);
@@ -227,7 +229,7 @@ public class StepCounter{
      * @param timestamp the time (epoch ms) of the new step
      * @return the current step count
      */
-    public int stepDetection(Double new_step, Double timestamp) {
+    public double stepDetection(Double new_step, Double timestamp) {
 
         // If there has not been enough data yet, skip analysis
         step_data.add(new_step);
@@ -239,7 +241,6 @@ public class StepCounter{
         // Get step N-1 and catagorise it
         Double step_being_analysed = step_data.get(step_data.size() - 2);
         int step_candidate = detectCandidate();
-        Log.d("STEP", "Candidate " + step_candidate);
 
         //If it is a peak
         if (step_candidate == 1) {
@@ -254,6 +255,8 @@ public class StepCounter{
                 step_classifications.add(1);
                 time_between_peaks.add(timestamp);
                 step_mid_points.add(step_midPoint_calc());
+                updatePeak(step_being_analysed, timestamp);
+
             } else if ((step_classifications.get(step_classifications.size() - 1) == 1 && (timestamp - time_between_peaks.get(time_between_peaks.size() - 1)) < peak_threshold && step_being_analysed > last_peak)) {
                 // If we have found a peak and the previous value was a smaller peak, and we haven't
                 // passed enough time for a new one, update the peak
@@ -277,13 +280,10 @@ public class StepCounter{
                 double mean_a = calculateAverage(step_mid_points);
                 double std_a = sd(step_mid_points, mean_a);
 
-                step_avg_arr.add(stepAverage(mean_a, std_a, 1));
-
                 ArrayList<Double> temp  = new ArrayList<>();
                 temp.add(Double.valueOf(peak_idx));
                 temp.add(last_peak);
                 peaks.add(temp);
-
                 ArrayList<Double> val  = new ArrayList<>();
                 val.add(Double.valueOf(val_count));
                 val.add(step_being_analysed);
@@ -293,9 +293,10 @@ public class StepCounter{
                 // If the last value was a valley and it was lower than the last, and not eneough
                 // time has passed since tthe last one, update the valley with the lower value
                 updateValley(step_being_analysed, timestamp);
-                val_count += 1;
+                ;
             }
         }
+        val_count += 1;
         return count;
     }
 
