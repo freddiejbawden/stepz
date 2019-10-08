@@ -6,96 +6,95 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".MainActivity">
-<LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
-
-
-    <EditText
-        android:id="@+id/notesEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:hint="notes"
-        />
-
-    <TextView
-        android:id="@+id/captureTimetextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="00:00"
-        android:textSize="24sp" />
-
-    <TextView
-        android:id="@+id/accelTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=""
-        />
-
-    <TextView
-        android:id="@+id/steps"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="TextView" />
-
-    <TextView
-        android:id="@+id/gyroTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=""
-        />
-
-    <TextView
-        android:id="@+id/freqTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=""
-        />
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/start_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="60dp"
-            android:layout_marginRight="50dp"
-            android:enabled="false"
-            android:text="Start" />
-
-        <Button
-            android:id="@+id/stop_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:enabled="false"
-            android:text="Stop" />
-
-    </LinearLayout>
-
-    <LinearLayout
+        android:id="@+id/background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@android:color/holo_red_dark"
         android:orientation="vertical">
 
-        <com.jjoe64.graphview.GraphView
-            android:id="@+id/graph"
-            android:layout_width="match_parent"
-            android:layout_height="500dp" />
 
-        <Button
-            android:id="@+id/onOff"
+        <EditText
+            android:id="@+id/notesEditText"
             android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_weight="1"
-            android:text="Button" />
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:hint="notes" />
+
+        <TextView
+            android:id="@+id/captureTimetextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="00:00"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/accelTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/steps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TextView" />
+
+        <TextView
+            android:id="@+id/gyroTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/freqTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/start_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="60dp"
+                android:layout_marginRight="50dp"
+                android:enabled="false"
+                android:text="Start" />
+
+            <Button
+                android:id="@+id/stop_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:enabled="false"
+                android:text="Stop" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <com.jjoe64.graphview.GraphView
+                android:id="@+id/graph"
+                android:layout_width="match_parent"
+                android:layout_height="500dp" />
+
+            <Button
+                android:id="@+id/onOff"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_weight="1"
+                android:text="Button" />
+        </LinearLayout>
+
     </LinearLayout>
-
-</LinearLayout>
 </ScrollView>

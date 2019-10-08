@@ -7,12 +7,14 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Environment;
+import android.text.Layout;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
@@ -83,28 +85,9 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     private TextView accelTextView;
     private TextView gyroTextView;
     private TextView freqTextView;
-    private EditText nameEditText;
-    private EditText notesEditText;
+    private LinearLayout back;
 
-    private Spinner positionSpinner;
-    private Spinner groupSpinner;
-    private Spinner activitySpinner;
 
-    private String group_str = null;
-    private String position_str = null;
-    private String act_type_str = null;
-    private String name_str = null;
-    private String notes_str = null;
-    private String side_str = null;
-
-    private String orientation_str = null;
-    private String steps_str = null;
-    private String mounting_str = null;
-
-    private RadioGroup sideRadioGroup;
-    private RadioGroup orientationRadioGroup;
-    private RadioGroup stepsRadioGroup;
-    private RadioGroup mountingRadioGroup;
     private TextView stepView;
     private LineGraphSeries<DataPoint> seriesX;
     private GraphView graph;
@@ -230,7 +213,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         gyroTextView = findViewById(R.id.gyroTextView);
         freqTextView = findViewById(R.id.freqTextView);
 
-        notesEditText = findViewById(R.id.notesEditText);
 
 
 
@@ -296,21 +278,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position,
                                long id) {
-        // TODO Auto-generated method stub
-        if (parent.getItemAtPosition(position).toString().compareTo("---") == 0) return;
-
-        if (parent.getId() == groupSpinner.getId()) {
-            //Toast.makeText(this, "GROUP : " + parent.getItemAtPosition(position).toString(), Toast.LENGTH_SHORT).show();
-            group_str = parent.getItemAtPosition(position).toString();
-        }
-        else if (parent.getId() == positionSpinner.getId()) {
-            //Toast.makeText(this, "POSITION : " + parent.getItemAtPosition(position).toString(), Toast.LENGTH_SHORT).show();
-            this.position_str = parent.getItemAtPosition(position).toString();
-        }
-        else if (parent.getId() == activitySpinner.getId()) {
-            //Toast.makeText(this, "ACTIVITY : " + parent.getItemAtPosition(position).toString(), Toast.LENGTH_SHORT).show();
-            this.act_type_str = parent.getItemAtPosition(position).toString();
-        }
+        return;
     }
 
     @Override
@@ -372,7 +340,20 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         Log.i("OrientAndroid", "QuatInt: (w=" + w + ", x=" + x + ", y=" + y + ", z=" + z + ")");
         Log.i("OrientAndroid", "QuatDbl: (w=" + dw + ", x=" + dx + ", y=" + dy + ", z=" + dz + ")");
     }
-
+    private boolean isWalking(List<Double> magnitudes) {
+        double mag_th = 1.1;
+        boolean is_under = true;
+        List<Double> slicedMags = magnitudes;
+        if (magnitudes.size() > 10) {
+            slicedMags = magnitudes.subList(magnitudes.size() - 10, magnitudes.size());
+        }
+        for (double mag : slicedMags) {
+            if (mag > mag_th) {
+                return true;
+            }
+        }
+        return false;
+    }
     private void handleRawPacket(final byte[] bytes) {
         long ts = System.currentTimeMillis();
         packetData.clear();
@@ -387,61 +368,28 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         float gyro_y = packetData.getShort() / 32.f;
         float gyro_z = packetData.getShort() / 32.f;
 
-        //float mag_x = packetData.getShort() / 16.f;  // integer part: 12 bits, fractional part 4 bits, so div by 2^4
-        //float mag_y = packetData.getShort() / 16.f;
-        //float mag_z = packetData.getShort() / 16.f;
-
-        //Log.i("OrientAndroid", "Accel:(" + accel_x + ", " + accel_y + ", " + accel_z + ")");
-        //Log.i("OrientAndroid", "Gyro:(" + gyro_x + ", " + gyro_y + ", " + gyro_z + ")");
-        //if (mag_x != 0f || mag_y != 0f || mag_z != 0f)
-            //Log.i("OrientAndroid", "Mag:(" + mag_x + ", " + mag_y + ", " + mag_z + ")");
-
         if (logging) {
-            //String[] entries = "first#second#third".split("#");
-            String[] entries = {Long.toString(ts),
-                    Integer.toString(counter),
-                    Float.toString(accel_x),
-                    Float.toString(accel_y),
-                    Float.toString(accel_z),
-                    Float.toString(gyro_x),
-                    Float.toString(gyro_y),
-                    Float.toString(gyro_z),
-            };
+
             double mag = Math.sqrt(Math.pow(accel_x, 2) + Math.pow(accel_y, 2) + Math.pow(accel_z, 2));
+            mags.add(mag);
 
-            // have we exceeded the threshold?
-            Log.d("STEP", std_mag+"");
-            if (stepSwitch) {
-                Log.d("STARTSTOP","start");
+            back = findViewById(R.id.background);
 
-                // feed
-                calculateStd = true;
-                sc.stepDetection(mag, (double) System.currentTimeMillis());
-                Log.d("STEP", sc.getPeaks() + "");
-                mags.add(mag);
-
-                //double new_mean_mag = MainActivity.calculateAverage(mags.subList(mags.size() - magLimit, mags.size()));
-                //double new_std_mag = MainActivity.sd(mags.subList(mags.size() - magLimit, mags.size()), new_mean_mag);
-                //if (new_std_mag<=std_mag) {
-                //    calculateStd = false;
-                //    Log.d("STARTSTOP","stop");
-                //}
-            }
-            /*
-            if (!calculateStd){
-                // calcualte std
-                if (mags.size() < magLimit) {
-                    mags.add(mag);
-                } else{
-                    mags.add(mag);
-                    mean_mag = MainActivity.calculateAverage(mags.subList(mags.size()-magLimit, mags.size()));
-                    std_mag = MainActivity.sd(mags.subList(mags.size()-magLimit, mags.size()), mean_mag);
-                }
-                if (Math.abs(mag - mean_mag) > std_mag*3) {
+            if (isWalking(mags) && mags.size() > 10) {
+                if (stepSwitch) {
+                    Log.d("STARTSTOP","walking");
+                    // feed
                     calculateStd = true;
+                    back.setBackgroundColor(Color.GREEN);
+
+                    sc.stepDetection(mag, (double) System.currentTimeMillis());
+                    Log.d("STEP", sc.getPeaks() + "");
                 }
+            } else {
+                back.setBackgroundColor(Color.RED);
+                Log.d("STARTSTOP","stopped");
             }
-            */
+
             Log.d("STEP", ""+sc.getCount());
             stepView.setText("Steps: " + sc.getCount());
             if (counter % 4 == 0 && stepSwitch) {
@@ -470,7 +418,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
                 Long elapsed_capture_time = System.currentTimeMillis() - capture_started_timestamp;
                 float connected_secs = elapsed_capture_time / 1000.f;
                 freq = counter / connected_secs;
-                //Log.i("OrientAndroid", "Packet count: " + Integer.toString(n) + ", Freq: " + Float.toString(freq));
 
                 String time_str = m_str + ":" + s_str;
 
