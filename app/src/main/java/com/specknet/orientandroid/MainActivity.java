@@ -14,6 +14,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -58,7 +59,7 @@ import smile.math.kernel.MercerKernel;
 import smile.classification.SVM;
 
 
-public class MainActivity extends Activity implements AdapterView.OnItemSelectedListener {
+public class MainActivity extends Activity {
 
     // test device - replace with the real BLE address of your sensor, which you can find
     // by scanning for devices with the NRF Connect App
@@ -75,26 +76,15 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     private ByteBuffer packetData;
 
     //private int n = 0;
-    private Long connected_timestamp = null;
-    private Long capture_started_timestamp = null;
+
     boolean connected = false;
-    private float freq = 0.f;
-
     private int counter = 0;
-    private CSVWriter writer;
-    private File path;
-    private File file;
-    private boolean logging = false;
 
-    private Button start_button;
-    private Button stop_button;
+
     private Button step_on_off_button;
+    private Button reset;
     private Context ctx;
-    private TextView captureTimetextView;
-    private TextView accelTextView;
-    private TextView gyroTextView;
-    private TextView freqTextView;
-    private LinearLayout back;
+    private ImageView back;
 
 
     private TextView stepView;
@@ -103,69 +93,13 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     private int inputCounter = 0;
     private final int RC_LOCATION_AND_STORAGE = 1;
     private  ArrayList<Double> mags = new ArrayList<Double>();
-    private int magLimit = 10;
-    private double mean_mag = 1;
-    private  double std_mag = 0.1;
-    private boolean calculateStd = false;
     private StepCounter sc = new StepCounter(2.75,0.33333,20,10);
     private boolean stepSwitch = false;
-
-    private int numPeaks = 0;
     private PointsGraphSeries<DataPoint> peakDatapoints;
     private double gamma = 0.00001;
     private int c = 1000;
 
     private SVM<double[]> svm;
-
-
-    /**
-     *  Returns the mean of a List<Double
-     * @param marks A list of values
-     * @return The mean
-     */
-    public static double calculateAverage(List<Double> marks) {
-        double sum = 0;
-        if(!marks.isEmpty()) {
-            for (Double mark : marks) {
-                sum += mark;
-            }
-            return sum / marks.size();
-        }
-        return sum;
-    }
-
-    /**
-     *  Generic function for finding the standard devation of a List<Double>
-     *
-     * @param table     A list of values
-     * @param mean_a    The mean of the values
-     * @return          The standard deviation
-     */
-    public static double sd (List<Double> table, Double mean_a)
-    {
-        if (table.size() == 0) {
-            return 0;
-        }
-        // Step 1:
-        double temp = 0;
-
-        for (int i = 0; i < table.size(); i++)
-        {
-            Double val = table.get(i);
-
-            // Step 2:
-            double squrDiffToMean = Math.pow(val - mean_a, 2);
-
-            // Step 3:
-            temp += squrDiffToMean;
-        }
-
-        // Step 4:
-        double meanOfDiffs = (double) temp / (double) (table.size());
-
-        // Step 5:
-        return Math.sqrt(meanOfDiffs);
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -177,13 +111,19 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         vp.setXAxisBoundsManual(true);
         vp.setMinX(0);
         vp.setMaxX(100);
-        vp.setScalable(true);
-        stepView = findViewById(R.id.steps);
         seriesX = new LineGraphSeries<>();
         seriesX.setColor(Color.BLUE);
         graph.addSeries(seriesX);
         peakDatapoints = new PointsGraphSeries<>();
         graph.addSeries(peakDatapoints);
+        reset = findViewById(R.id.reset);
+        reset.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                sc.resetSteps();
+            }
+        });
+
         getPermissions();
         GaussianKernel rbf = new GaussianKernel(4);
         double c = 1000;
@@ -227,44 +167,18 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     }
 
     private void runApp() {
-        path = Environment.getExternalStorageDirectory();
-        step_on_off_button = (Button) findViewById(R.id.onOff);
+        stepView = findViewById(R.id.steps);
+
+        step_on_off_button = findViewById(R.id.onOff);
         step_on_off_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 stepSwitch = !stepSwitch;
             }
         });
-        start_button = findViewById(R.id.start_button);
-        stop_button = findViewById(R.id.stop_button);
-        captureTimetextView = findViewById(R.id.captureTimetextView);
-        accelTextView = findViewById(R.id.accelTextView);
-        gyroTextView = findViewById(R.id.gyroTextView);
-        freqTextView = findViewById(R.id.freqTextView);
+        back = findViewById(R.id.movingIndicator);
 
 
-
-
-
-        List<String> position_list = new ArrayList<String>();
-        position_list.add("---");
-        position_list.add("Wrist");
-        position_list.add("Upper arm");
-        position_list.add("Torso");
-        position_list.add("Upper Leg");
-        position_list.add("Lower Leg");
-        position_list.add("Foot");
-
-
-
-        start_button.setOnClickListener(v-> {
-            logging = true;
-            capture_started_timestamp = System.currentTimeMillis();
-            counter = 0;
-            Toast.makeText(this, "Start logging",
-                    Toast.LENGTH_SHORT).show();
-            stop_button.setEnabled(true);
-        });
 
 
         packetData = ByteBuffer.allocate(18);
@@ -303,18 +217,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
                         }
                 );
     }
-
-    @Override
-    public void onItemSelected(AdapterView<?> parent, View view, int position,
-                               long id) {
-        return;
-    }
-
-    @Override
-    public void onNothingSelected(AdapterView<?> parent) {
-        // TODO Auto-generated method stub
-    }
-
     private void connectToOrient(String addr) {
         orient_device = rxBleClient.getBleDevice(addr);
         String characteristic;
@@ -331,14 +233,12 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
                             //n += 1;
                             // Given characteristic has been changes, here is the value.
 
-                            //Log.i("OrientAndroid", "Received " + bytes.length + " bytes");
+                            Log.i("STEPS", "Received " + bytes.length + " bytes");
                             if (!connected) {
                                 connected = true;
-                                connected_timestamp = System.currentTimeMillis();
                                 runOnUiThread(() -> {
-                                                               Toast.makeText(ctx, "Receiving sensor data",
+                                                               Toast.makeText(ctx, "Connected To Step Counter",
                                                                        Toast.LENGTH_SHORT).show();
-                                    start_button.setEnabled(true);
                                                            });
                             }
                             if (raw) handleRawPacket(bytes); else handleQuatPacket(bytes);
@@ -390,7 +290,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         return false;
     }
     private void handleRawPacket(final byte[] bytes) {
-        long ts = System.currentTimeMillis();
+        Log.d("STEP", "dat");
         packetData.clear();
         packetData.put(bytes);
         packetData.position(0);
@@ -403,73 +303,38 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         float gyro_y = packetData.getShort() / 32.f;
         float gyro_z = packetData.getShort() / 32.f;
 
-        if (logging) {
 
-            double mag = Math.sqrt(Math.pow(accel_x, 2) + Math.pow(accel_y, 2) + Math.pow(accel_z, 2));
-            mags.add(mag);
+        double mag = Math.sqrt(Math.pow(accel_x, 2) + Math.pow(accel_y, 2) + Math.pow(accel_z, 2));
+        mags.add(mag);
+        final boolean moving = isWalking(mags) && mags.size() > 10;
+        if (moving) {
+            if (stepSwitch) {
+                sc.stepDetection(mag, (double) System.currentTimeMillis());
+                Log.d("STEP", sc.getPeaks() + "");
 
-            back = findViewById(R.id.background);
-
-            if (isWalking(mags) && mags.size() > 10) {
-                if (stepSwitch) {
-                    Log.d("STARTSTOP","walking");
-                    // feed
-                    calculateStd = true;
-                    back.setBackgroundColor(Color.GREEN);
-
-                    sc.stepDetection(mag, (double) System.currentTimeMillis());
-                    Log.d("STEP", sc.getPeaks() + "");
-                }
-            } else {
-                back.setBackgroundColor(Color.RED);
-                Log.d("STARTSTOP","stopped");
             }
-
-            Log.d("STEP", ""+sc.getCount());
-            stepView.setText("Steps: " + sc.getCount());
-            if (counter % 4 == 0 && stepSwitch) {
-                seriesX.appendData(new DataPoint(inputCounter, mag),true,100);
-
-                inputCounter+=1;
-            }
-
-            if (counter % 12 == 0) {
-                long elapsed_time = System.currentTimeMillis() - capture_started_timestamp;
-                int total_secs = (int)elapsed_time / 1000;
-                int s = total_secs % 60;
-                int m = total_secs / 60;
-
-                String m_str = Integer.toString(m);
-                if (m_str.length() < 2) {
-                    m_str = "0" + m_str;
-                }
-
-                String s_str = Integer.toString(s);
-                if (s_str.length() < 2) {
-                    s_str = "0" + s_str;
-                }
-
-
-                Long elapsed_capture_time = System.currentTimeMillis() - capture_started_timestamp;
-                float connected_secs = elapsed_capture_time / 1000.f;
-                freq = counter / connected_secs;
-
-                String time_str = m_str + ":" + s_str;
-
-                String accel_str = "Accel: (" + accel_x + ", " + accel_y + ", " + accel_z + ")";
-                String gyro_str = "Gyro: (" + gyro_x + ", " + gyro_y + ", " + gyro_z + ")";
-                String freq_str = "Freq: " + freq;
-                Log.d("ACC", accel_str);
-
-                runOnUiThread(() -> {
-                    captureTimetextView.setText(time_str);
-                    accelTextView.setText(accel_str);
-                    gyroTextView.setText(gyro_str);
-                    freqTextView.setText(freq_str);
-                });
-            }
-
-            counter += 1;
+        } else {
+            Log.d("STARTSTOP","stopped");
         }
+
+        Log.d("STEP", ""+sc.getCount());
+        if (counter % 4 == 0 && stepSwitch) {
+            double mag_g = Math.sqrt(Math.pow(gyro_x, 2) + Math.pow(gyro_y, 2) + Math.pow(gyro_z, 2));
+            seriesX.appendData(new DataPoint(inputCounter, mag),true,500);
+
+            inputCounter+=1;
+        }
+        counter += 1;
+        runOnUiThread(() -> {
+            stepView.setText(""+sc.getCount());
+            if (moving) {
+                back.setColorFilter(Color.GREEN);
+            } else {
+                back.setColorFilter(Color.RED);
+
+            }
+        });
+
+
     }
 }
