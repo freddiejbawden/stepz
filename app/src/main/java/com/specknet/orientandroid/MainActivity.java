@@ -31,7 +31,10 @@ import com.polidea.rxandroidble2.RxBleClient;
 import com.polidea.rxandroidble2.RxBleDevice;
 import com.polidea.rxandroidble2.scan.ScanSettings;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 import java.io.BufferedReader;
+import java.io.DataOutput;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
@@ -44,10 +47,16 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.lang.*;
 
 import io.reactivex.disposables.Disposable;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
+import smile.math.kernel.GaussianKernel;
+import smile.math.kernel.MercerKernel;
+
+import smile.classification.SVM;
+
 
 public class MainActivity extends Activity implements AdapterView.OnItemSelectedListener {
 
@@ -103,6 +112,10 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
 
     private int numPeaks = 0;
     private PointsGraphSeries<DataPoint> peakDatapoints;
+    private double gamma = 0.00001;
+    private int c = 1000;
+
+    private SVM<double[]> svm;
 
 
     /**
@@ -172,6 +185,22 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         peakDatapoints = new PointsGraphSeries<>();
         graph.addSeries(peakDatapoints);
         getPermissions();
+        GaussianKernel rbf = new GaussianKernel(4);
+        double c = 1000;
+
+
+        svm = new SVM<>(new GaussianKernel(0.0001), c);
+
+
+
+
+
+
+
+
+
+
+
     }
 
     @AfterPermissionGranted(RC_LOCATION_AND_STORAGE)
@@ -343,6 +372,12 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     private boolean isWalking(List<Double> magnitudes) {
         double mag_th = 1.1;
         boolean is_under = true;
+        double[] newMags = ArrayUtils.toPrimitive(magnitudes.toArray(new Double[magnitudes.size()]));
+        int predict = svm.predict(newMags);
+        Log.d("PREDICT", newMags.toString());
+
+
+
         List<Double> slicedMags = magnitudes;
         if (magnitudes.size() > 10) {
             slicedMags = magnitudes.subList(magnitudes.size() - 10, magnitudes.size());

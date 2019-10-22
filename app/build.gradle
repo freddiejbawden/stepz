@@ -31,6 +31,11 @@ dependencies {
     implementation 'pub.devrel:easypermissions:2.0.1'
     implementation 'com.jjoe64:graphview:4.2.2'
     testImplementation 'junit:junit:4.12'
+    //noinspection GradleCompatible
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    implementation files('src/main/java/com/specknet/orientandroid/libsvm.jar')
+    implementation files('src/main/java/com/specknet/orientandroid/wekaSTRIPPED.jar')
+    implementation files('src/main/java/com/specknet/orientandroid/javaml-0.1.7.jar')
+    implementation 'com.github.haifengl:smile-core:1.5.3'
 }
