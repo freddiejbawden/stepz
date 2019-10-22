@@ -80,6 +80,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     private Button start_button;
     private Button stop_button;
     private Button step_on_off_button;
+    private Button reset;
     private Context ctx;
     private TextView captureTimetextView;
     private TextView accelTextView;
@@ -171,6 +172,13 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         graph.addSeries(seriesX);
         peakDatapoints = new PointsGraphSeries<>();
         graph.addSeries(peakDatapoints);
+        reset = findViewById(R.id.reset);
+        reset.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                sc.resetSteps();
+            }
+        });
         getPermissions();
     }
 
@@ -355,6 +363,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         return false;
     }
     private void handleRawPacket(final byte[] bytes) {
+        Log.d("STEP","data: "+logging);
         long ts = System.currentTimeMillis();
         packetData.clear();
         packetData.put(bytes);
@@ -369,7 +378,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         float gyro_z = packetData.getShort() / 32.f;
 
         if (logging) {
-
+            Log.d("STEP","LOGGING");
             double mag = Math.sqrt(Math.pow(accel_x, 2) + Math.pow(accel_y, 2) + Math.pow(accel_z, 2));
             mags.add(mag);
 
@@ -393,7 +402,8 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
             Log.d("STEP", ""+sc.getCount());
             stepView.setText("Steps: " + sc.getCount());
             if (counter % 4 == 0 && stepSwitch) {
-                seriesX.appendData(new DataPoint(inputCounter, mag),true,100);
+                double mag_g = Math.sqrt(Math.pow(gyro_x, 2) + Math.pow(gyro_y, 2) + Math.pow(gyro_z, 2));
+                seriesX.appendData(new DataPoint(inputCounter, mag),true,500);
 
                 inputCounter+=1;
             }

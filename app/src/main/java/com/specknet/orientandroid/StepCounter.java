@@ -178,6 +178,10 @@ public class StepCounter{
         peak_threshold = mean_t - (sd(time_diff, mean_t)/this.beta);
     }
 
+    public void resetSteps() {
+        this.count = 0;
+    }
+
     /**
      * Updates the time between valleys using the last M values
      *
