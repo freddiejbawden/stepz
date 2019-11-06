@@ -89,6 +89,8 @@ public class MainActivity extends Activity {
     private StepCounter sc = new StepCounter(2.75,0.33333,20,10);
     private boolean stepSwitch = false;
     private PointsGraphSeries<DataPoint> peakDatapoints;
+    private long init_time = 0;
+    private long time_passed = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -275,6 +277,14 @@ public class MainActivity extends Activity {
         return Integer.toUnsignedLong(buf.getInt());
     }
     private void handleRawPacket(final byte[] bytes) {
+        if (init_time==0.0) {
+            init_time = System.currentTimeMillis();
+        } else {
+            time_passed = System.currentTimeMillis() - init_time;
+            Log.d("TimePassed", time_passed+"");
+        }
+
+
         Log.d("STEP", "dat");
         long mag_l = bytesToInt(bytes,0);
         double mag = ((float) mag_l)/1e6;

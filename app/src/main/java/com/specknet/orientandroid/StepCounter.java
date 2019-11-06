@@ -66,11 +66,7 @@ public class StepCounter{
      * @return          a double containing a threshold for the step average
      */
     private Double stepAverage(Double mean_a, Double std_a, int sign) {
-
-
-        double out = mean_a + sign*std_a/this.alpha;
-        return out;
-
+        return mean_a + sign * std_a / this.alpha;
     }
 
     /**
