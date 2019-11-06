@@ -65,7 +65,7 @@ public class StepCounter{
      * @param sign      whether to add or subtract the standard deviation
      * @return          a double containing a threshold for the step average
      */
-    public Double stepAverage(Double mean_a, Double std_a, int sign) {
+    private Double stepAverage(Double mean_a, Double std_a, int sign) {
 
 
         double out = mean_a + sign*std_a/this.alpha;

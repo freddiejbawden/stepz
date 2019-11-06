@@ -50,15 +50,17 @@ import io.reactivex.disposables.Disposable;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
+import static java.lang.Integer.toUnsignedLong;
+
 public class MainActivity extends Activity {
 
     // test device - replace with the real BLE address of your sensor, which you can find
     // by scanning for devices with the NRF Connect App
 
-    private static final String ORIENT_BLE_ADDRESS = "D4:A3:C2:EC:49:18";
+    private static final String ORIENT_BLE_ADDRESS = "FF:37:3C:B4:74:63";
 
     private static final String ORIENT_QUAT_CHARACTERISTIC = "00001526-1212-efde-1523-785feabcd125";
-    private static final String ORIENT_RAW_CHARACTERISTIC = "ef680406-9b35-4933-9b10-52ffa9740042";
+    private static final String ORIENT_RAW_CHARACTERISTIC = "0000a001-0000-1000-8000-00805f9b34fb";
 
     private static final boolean raw = true;
     private RxBleDevice orient_device;
@@ -191,9 +193,9 @@ public class MainActivity extends Activity {
     private void connectToOrient(String addr) {
         orient_device = rxBleClient.getBleDevice(addr);
         String characteristic;
-        if (raw) characteristic = ORIENT_RAW_CHARACTERISTIC; else characteristic = ORIENT_QUAT_CHARACTERISTIC;
-
-        orient_device.establishConnection(false)
+       characteristic = ORIENT_RAW_CHARACTERISTIC;
+        Log.d("BLE", "Connecting");
+        orient_device.establishConnection(true)
                 .flatMap(rxBleConnection -> rxBleConnection.setupNotification(UUID.fromString(characteristic)))
                 .doOnNext(notificationObservable -> {
                     // Notification has been set up
@@ -254,22 +256,30 @@ public class MainActivity extends Activity {
         }
         return false;
     }
+    private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
+    public static long bytesToInt(final byte[] array, final int start)
+    {
+        Log.d("STEPS",bytesToHex(array));
+        final ByteBuffer buf = ByteBuffer.wrap(array); // big endian by default
+        buf.order(ByteOrder.LITTLE_ENDIAN);
+        buf.position(start);
+        return Integer.toUnsignedLong(buf.getInt());
+    }
     private void handleRawPacket(final byte[] bytes) {
         Log.d("STEP", "dat");
-        packetData.clear();
-        packetData.put(bytes);
-        packetData.position(0);
+        long mag_l = bytesToInt(bytes,0);
+        double mag = ((float) mag_l)/1e6;
+        Log.d("STEP",""+mag);
 
-        float accel_x = packetData.getShort() / 1024.f;  // integer part: 6 bits, fractional part 10 bits, so div by 2^10
-        float accel_y = packetData.getShort() / 1024.f;
-        float accel_z = packetData.getShort() / 1024.f;
-
-        float gyro_x = packetData.getShort() / 32.f;  // integer part: 11 bits, fractional part 5 bits, so div by 2^5
-        float gyro_y = packetData.getShort() / 32.f;
-        float gyro_z = packetData.getShort() / 32.f;
-
-
-        double mag = Math.sqrt(Math.pow(accel_x, 2) + Math.pow(accel_y, 2) + Math.pow(accel_z, 2));
         mags.add(mag);
         final boolean moving = isWalking(mags) && mags.size() > 10;
         if (moving) {
@@ -284,7 +294,6 @@ public class MainActivity extends Activity {
 
         Log.d("STEP", ""+sc.getCount());
         if (counter % 4 == 0 && stepSwitch) {
-            double mag_g = Math.sqrt(Math.pow(gyro_x, 2) + Math.pow(gyro_y, 2) + Math.pow(gyro_z, 2));
             seriesX.appendData(new DataPoint(inputCounter, mag),true,500);
 
             inputCounter+=1;
