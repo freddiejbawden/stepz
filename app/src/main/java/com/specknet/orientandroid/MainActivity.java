@@ -4,6 +4,10 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Environment;
@@ -52,7 +56,7 @@ import pub.devrel.easypermissions.EasyPermissions;
 
 import static java.lang.Integer.toUnsignedLong;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements SensorEventListener {
 
     // test device - replace with the real BLE address of your sensor, which you can find
     // by scanning for devices with the NRF Connect App
@@ -82,20 +86,41 @@ public class MainActivity extends Activity {
 
     private TextView stepView;
     private LineGraphSeries<DataPoint> seriesX;
+    private LineGraphSeries<DataPoint> seriesY;
+
     private GraphView graph;
     private int inputCounter = 0;
+    private int inputCounter2 = 0;
     private final int RC_LOCATION_AND_STORAGE = 1;
     private  ArrayList<Double> mags = new ArrayList<Double>();
     private StepCounter sc = new StepCounter(2.75,0.33333,20,10);
+    private StepCounter scGyro = new StepCounter(2.75,0.2,20,10);
+
     private boolean stepSwitch = false;
     private PointsGraphSeries<DataPoint> peakDatapoints;
     private long init_time = 0;
     private long time_passed = 0;
 
+    private SensorManager sensorManager;
+    private Sensor accSensor;
+    private Sensor gyroSensor;
+    private ArrayList<Double> gyroSmooth = new ArrayList<>();
+    private ArrayList<Double> magSmooth = new ArrayList<>();
+
+    private int walkingFlag;
+    private long timeSinceSwitch = 0L;
+    private  long switchThresh = 1000L;
+    private long switchStartTime = 0L;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        sensorManager.registerListener(this,gyroSensor,SensorManager.SENSOR_DELAY_UI);
+
+        sensorManager.registerListener(this,accSensor,SensorManager.SENSOR_DELAY_UI);
         ctx = this;
         graph = (GraphView) findViewById(R.id.graph);
         Viewport vp = graph.getViewport();
@@ -104,7 +129,12 @@ public class MainActivity extends Activity {
         vp.setMaxX(100);
         seriesX = new LineGraphSeries<>();
         seriesX.setColor(Color.BLUE);
+        seriesY = new LineGraphSeries<>();
+        seriesY.setColor(Color.RED);
+
         graph.addSeries(seriesX);
+        graph.addSeries(seriesY);
+
         peakDatapoints = new PointsGraphSeries<>();
         graph.addSeries(peakDatapoints);
         reset = findViewById(R.id.reset);
@@ -112,10 +142,88 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View view) {
                 sc.resetSteps();
+                scGyro.resetSteps();
             }
         });
 
         getPermissions();
+    }
+    @Override
+    public void onAccuracyChanged(Sensor arg0, int arg1) {
+    }
+    public double calcMagFromVals(float[] values){
+        double sum = 0.0;
+        for (float v : values){
+            sum += Math.pow((((double) v)),2.0);
+        }
+        return Math.sqrt(sum)-9.8;
+    }
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            double mag = calcMagFromVals(event.values);
+            magSmooth.add(mag);
+            if (magSmooth.size() > 3) {
+                magSmooth.remove(0);
+            }
+            double sum = 0;
+            for (double m : magSmooth) {
+                sum += m;
+            }
+
+            mags.add(mag);
+            int new_walk_d = this.isWalking(mags);
+            if (new_walk_d != walkingFlag) {
+                switchStartTime = System.currentTimeMillis();
+                timeSinceSwitch = 0L;
+            } else {
+                timeSinceSwitch += System.currentTimeMillis() - switchStartTime;
+            }
+            walkingFlag = new_walk_d;
+            if (walkingFlag == 2 && timeSinceSwitch > switchThresh) {
+                seriesX.appendData(new DataPoint(inputCounter,sum/magSmooth.size()),true,500);
+                inputCounter++;
+                sc.stepDetection(sum/magSmooth.size(), (double) System.currentTimeMillis());
+            }
+
+            Log.d("STEP", "WALKING: " + walkingFlag);
+
+        } else {
+            double axisX = (double) event.values[0];
+            double axisY = (double) event.values[1];
+            double axisZ = (double) event.values[2];
+            double omegaMagnitude = Math.sqrt(axisX * axisX + axisY * axisY + axisZ * axisZ);
+            gyroSmooth.add(axisX);
+            if (gyroSmooth.size() > 3) {
+                gyroSmooth.remove(0);
+            }
+            double sum = 0;
+            for (double g : gyroSmooth) {
+                sum += g;
+            }
+            if (walkingFlag == 1 || walkingFlag == 0) {
+                seriesX.appendData(new DataPoint(inputCounter,sum/gyroSmooth.size()),true,500);
+                inputCounter++;
+                if (walkingFlag == 1 && timeSinceSwitch > switchThresh){
+                    scGyro.stepDetection(sum/gyroSmooth.size(), (double) System.currentTimeMillis());
+
+                }
+            }
+            //seriesX.appendData(new DataPoint(inputCounter, sum/gyroSmooth.size()),true,500);
+            //inputCounter++;
+        }
+        runOnUiThread(() -> {
+            stepView.setText(""+(sc.getCount()+scGyro.getCount()));
+            if (walkingFlag == 2 && timeSinceSwitch > switchThresh) {
+                back.setColorFilter(Color.GREEN);
+            } else if (walkingFlag == 1 && timeSinceSwitch > switchThresh) {
+                back.setColorFilter(Color.YELLOW);
+            } else if (timeSinceSwitch > switchThresh && walkingFlag == 0)  {
+                back.setColorFilter(Color.RED);
+            }
+        });
+
+
     }
 
     @AfterPermissionGranted(RC_LOCATION_AND_STORAGE)
@@ -244,19 +352,25 @@ public class MainActivity extends Activity {
         Log.i("OrientAndroid", "QuatInt: (w=" + w + ", x=" + x + ", y=" + y + ", z=" + z + ")");
         Log.i("OrientAndroid", "QuatDbl: (w=" + dw + ", x=" + dx + ", y=" + dy + ", z=" + dz + ")");
     }
-    private boolean isWalking(List<Double> magnitudes) {
-        double mag_th = 1.1;
+    private int isWalking(List<Double> magnitudes) {
+        double mag_th_1 = 0.6;
+        double mag_th_2 = 2.0;
+
         boolean is_under = true;
         List<Double> slicedMags = magnitudes;
         if (magnitudes.size() > 10) {
             slicedMags = magnitudes.subList(magnitudes.size() - 10, magnitudes.size());
         }
+        boolean shuffling = false;
         for (double mag : slicedMags) {
-            if (mag > mag_th) {
-                return true;
+            if (mag > mag_th_2) {
+                return 2;
+            }
+            if (mag < mag_th_2 && mag > mag_th_1) {
+                shuffling = true;
             }
         }
-        return false;
+        return (shuffling) ? 1 : 0;
     }
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
     public static String bytesToHex(byte[] bytes) {
@@ -280,18 +394,17 @@ public class MainActivity extends Activity {
         if (init_time==0.0) {
             init_time = System.currentTimeMillis();
         } else {
-            time_passed = System.currentTimeMillis() - init_time;
-            Log.d("TimePassed", time_passed+"");
+            time_passed =(System.currentTimeMillis() - init_time);
+            Log.d("TimePassed", time_passed/1e3+"");
         }
-
-
+        init_time = System.currentTimeMillis();
         Log.d("STEP", "dat");
         long mag_l = bytesToInt(bytes,0);
         double mag = ((float) mag_l)/1e6;
         Log.d("STEP",""+mag);
 
         mags.add(mag);
-        final boolean moving = isWalking(mags) && mags.size() > 10;
+        final boolean moving = isWalking(mags) == 2 && mags.size() > 10;
         if (moving) {
             if (stepSwitch) {
                 sc.stepDetection(mag, (double) System.currentTimeMillis());
