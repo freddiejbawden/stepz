@@ -2,11 +2,15 @@ package com.specknet.orientandroid;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Environment;
+import android.support.v4.app.NotificationCompat;
 import android.text.Layout;
 import android.util.Log;
 import android.view.View;
@@ -50,6 +54,15 @@ import io.reactivex.disposables.Disposable;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
+import android.app.Service;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.IBinder;
+
+
+import org.w3c.dom.Text;
+
 import static java.lang.Integer.toUnsignedLong;
 
 public class MainActivity extends Activity {
@@ -58,9 +71,13 @@ public class MainActivity extends Activity {
     // by scanning for devices with the NRF Connect App
 
     private static final String ORIENT_BLE_ADDRESS = "FF:37:3C:B4:74:63";
+    private static final String CHANNEL_ID = "123456";
+
 
     private static final String ORIENT_QUAT_CHARACTERISTIC = "00001526-1212-efde-1523-785feabcd125";
     private static final String ORIENT_RAW_CHARACTERISTIC = "0000a001-0000-1000-8000-00805f9b34fb";
+    private final static double walkingFactor = 0.57;
+
 
     private static final boolean raw = true;
     private RxBleDevice orient_device;
@@ -73,11 +90,14 @@ public class MainActivity extends Activity {
     boolean connected = false;
     private int counter = 0;
 
-
+    // UI elements
     private Button step_on_off_button;
     private Button reset;
     private Context ctx;
     private ImageView back;
+    private TextView distText;
+    private TextView calsText;
+    private TextView timeText;
 
 
     private TextView stepView;
@@ -91,29 +111,34 @@ public class MainActivity extends Activity {
     private PointsGraphSeries<DataPoint> peakDatapoints;
     private long init_time = 0;
     private long time_passed = 0;
+    private double stride_length = 0;
+    private int height = 0;
+    private String gender = "Male";
+    private double weight = 0.0;
+    private double time_walked_init = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        View decorView = getWindow().getDecorView();
+        int uiOpt = View.SYSTEM_UI_FLAG_FULLSCREEN;
+        decorView.setSystemUiVisibility(uiOpt);
+
         ctx = this;
-        graph = (GraphView) findViewById(R.id.graph);
-        Viewport vp = graph.getViewport();
-        vp.setXAxisBoundsManual(true);
-        vp.setMinX(0);
-        vp.setMaxX(100);
+
+        distText = (TextView) findViewById(R.id.dist_walked_text);
+        calsText = (TextView) findViewById(R.id.cals_burned_text);
+        timeText = (TextView) findViewById(R.id.time_walked_text);
+
+
         seriesX = new LineGraphSeries<>();
         seriesX.setColor(Color.BLUE);
-        graph.addSeries(seriesX);
+
         peakDatapoints = new PointsGraphSeries<>();
-        graph.addSeries(peakDatapoints);
-        reset = findViewById(R.id.reset);
-        reset.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                sc.resetSteps();
-            }
-        });
+
+
+        stride_length = strideLength(height, gender);
 
         getPermissions();
     }
@@ -144,14 +169,22 @@ public class MainActivity extends Activity {
     private void runApp() {
         stepView = findViewById(R.id.steps);
 
+
         step_on_off_button = findViewById(R.id.onOff);
+        step_on_off_button.setText(R.string.resume);
+
         step_on_off_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 stepSwitch = !stepSwitch;
+                if(stepSwitch) {
+                    step_on_off_button.setText(R.string.pause);
+                } else {
+                    step_on_off_button.setText(R.string.resume);
+
+                }
             }
         });
-        back = findViewById(R.id.movingIndicator);
 
 
 
@@ -282,6 +315,7 @@ public class MainActivity extends Activity {
         } else {
             time_passed = System.currentTimeMillis() - init_time;
             Log.d("TimePassed", time_passed+"");
+
         }
 
 
@@ -303,6 +337,41 @@ public class MainActivity extends Activity {
         }
 
         Log.d("STEP", ""+sc.getCount());
+
+        if(moving){
+
+            if (time_walked_init==0.0) {
+                time_walked_init = System.currentTimeMillis();
+            } else {
+                time_passed = System.currentTimeMillis() - init_time;
+                if(time_passed>30000) {
+
+                    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                            .setSmallIcon(R.drawable.ic_happy)
+                            .setContentTitle("Movement alert!")
+                            .setContentText("You haven't moved in " + time_passed + "!")
+                            .setStyle(new NotificationCompat.BigTextStyle()
+                                    .bigText("Much longer text that cannot fit one line..."))
+                            .setPriority(NotificationCompat.PRIORITY_HIGH);
+
+                }
+
+            }
+
+            long time = System.currentTimeMillis();
+        }
+
+
+        double dist  = distanceTravelled(sc.getCount(),stride_length);
+
+        double cals_burned = caloriesBurned(weight, dist, sc.getCount(), stride_length);
+
+        distText.setText(dist+"");
+        calsText.setText(cals_burned+"");
+
+
+
+
         if (counter % 4 == 0 && stepSwitch) {
             seriesX.appendData(new DataPoint(inputCounter, mag),true,500);
 
@@ -321,4 +390,69 @@ public class MainActivity extends Activity {
 
 
     }
+
+
+    private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = getString(R.string.channel_name);
+            String description = getString(R.string.channel_description);
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
+    private double strideLength(Integer height, String gender) {
+        switch (gender) {
+
+            case "Male": return height*0.415;
+
+            case "Female": return height*0.413;
+
+            default:
+                throw new IllegalStateException("Unexpected value: " + gender);
+        }
+    }
+
+    private double distanceTravelled(Integer steps, double stride_length) {
+        return steps*stride_length;
+    }
+
+    /*
+    Taken from https://fitness.stackexchange.com/questions/25472/how-to-calculate-calorie-from-pedometer and adapted using formula found online.
+    Calculates the calories burned for the user using his distance, weight and height.
+     */
+    public double caloriesBurned(double weight, Double distance, Integer stepsCount, double stride_length) {
+
+
+
+        double step_size_feet = stride_length / 12; //feet/stride
+
+        double distance_feet = distance*3280.84;
+
+
+        Log.d("MILEAGE", Double.toString(distance_feet));
+
+        Log.d("STEPSIZE", Double.toString(step_size_feet));
+
+
+        Log.d("FITBIT", Double.toString(stepsCount));
+
+
+        double caloriesBurnedPerMile = walkingFactor * (weight * 2.2);
+
+
+        double stepCountMile = 5280 / step_size_feet;
+
+        double conversationFactor = caloriesBurnedPerMile / stepCountMile;
+
+        return stepsCount * conversationFactor;
+    }
 }
+

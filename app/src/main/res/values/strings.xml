@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">OrientAndroid</string>
     <string name="location_and_storage_rationale">This app requires location permission to scan for BLE devices and storage permission to log data to a CSV file</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="statistics">Statistics</string>
+    <string name="channel_name">move notif</string>
+    <string name="channel_description">haven\'t moved notification</string>
 </resources>
