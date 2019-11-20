@@ -267,7 +267,7 @@ public class StepCounter{
                 // If it is the first ever valley, add it to our collections and update
                 time_between_valleys.add(timestamp);
                 updateValley(step_being_analysed, timestamp);
-            } else if (step_classifications.get(step_classifications.size() - 1) == 1 && (timestamp - time_between_valleys.get(time_between_valleys.size() - 1)) >= valley_threshold) {
+            } else if (step_classifications.size() > 0 && step_classifications.get(step_classifications.size() - 1) == 1 && (timestamp - time_between_valleys.get(time_between_valleys.size() - 1)) >= valley_threshold) {
                 // If the last value was a peak and there has been enough time sincet the last valley
                 // update and increment the step count
                 step_classifications.add(-1);
@@ -289,7 +289,7 @@ public class StepCounter{
                 val.add(step_being_analysed);
                 valleys.add(val);
 
-            } else if ((step_classifications.get(step_classifications.size() - 1) == -1 && (timestamp - time_between_peaks.get(time_between_peaks.size() - 1)) <= valley_threshold && step_being_analysed < last_valley)) {
+            } else if (step_classifications.size() > 0 && (step_classifications.get(step_classifications.size() - 1) == -1 && (timestamp - time_between_peaks.get(time_between_peaks.size() - 1)) <= valley_threshold && step_being_analysed < last_valley)) {
                 // If the last value was a valley and it was lower than the last, and not eneough
                 // time has passed since tthe last one, update the valley with the lower value
                 updateValley(step_being_analysed, timestamp);
