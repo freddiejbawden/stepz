@@ -36,44 +36,12 @@ public class BodyActivity extends AppCompatActivity {
         weightSpinner = (Spinner) findViewById(R.id.weightSpinner);
         heightSpinner = (Spinner) findViewById(R.id.heightSpinner);
 
-        // Create an ArrayAdapter using the string array and a default spinner layout
-        ArrayAdapter<CharSequence> weight_adapter = ArrayAdapter.createFromResource(this,
-                R.array.planets_array, android.R.layout.simple_spinner_item);
-        // Specify the layout to use when the list of choices appears
-        weight_adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        // Apply the adapter to the spinner
-        weightSpinner.setAdapter(weight_adapter);
 
 
-        // Create an ArrayAdapter using the string array and a default spinner layout
-        ArrayAdapter<CharSequence> height_adapter = ArrayAdapter.createFromResource(this,
-                R.array.planets_array, android.R.layout.simple_spinner_item);
-        // Specify the layout to use when the list of choices appears
-        height_adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        // Apply the adapter to the spinner
-        heightSpinner.setAdapter(height_adapter);
-
-
-        final NumberPicker numberPicker = new NumberPicker(this);
-
-
-
-
+        // Setting a Custom Adapter to the Spinner
+        heightSpinner.setAdapter(new MyAdapter(BodyActivity.this, R.layout.height_spinner, "height"));
+        weightSpinner.setAdapter(new MyAdapter(BodyActivity.this, R.layout.weight_spinner, "weight"));
 
     }
 
-
-    public class SpinnerActivity extends Activity implements AdapterView.OnItemSelectedListener {
-
-        public void onItemSelected(AdapterView<?> parent, View view,
-                                   int pos, long id) {
-            // An item was selected. You can retrieve the selected item using
-            // parent.getItemAtPosition(pos)
-        }
-
-        public void onNothingSelected(AdapterView<?> parent) {
-            // Another interface callback
-        }
-
-    }
 }
