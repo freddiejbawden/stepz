@@ -1,6 +1,7 @@
 package com.specknet.orientandroid;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,12 +14,17 @@ public class MyAdapter extends ArrayAdapter {
     private String type = "";
 
     public MyAdapter(Context context, int textViewResourceId, String type) {
+
         super(context, textViewResourceId);
+        Log.d("TEST", "HERE");
+
         this.type = type;
     }
 
     public View getCustomView(int position, View convertView,
                               ViewGroup parent) {
+
+        Log.d("TEST", "HERE");
 
         if(type.equals("height")) {
             // Inflating the layout for the custom Spinner
