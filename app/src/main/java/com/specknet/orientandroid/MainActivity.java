@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
     private LineGraphSeries<DataPoint> seriesY;
     private LineGraphSeries<DataPoint> seriesZ;
 
-
+    private int totalSteps;
     private GraphView graph;
     private int inputCounter = 0;
     private int inputCounter2 = 0;
@@ -106,13 +106,16 @@ public class MainActivity extends Activity {
     private PointsGraphSeries<DataPoint> peakDatapoints;
     private long init_time = 0;
     private long time_passed = 0;
-
+    private int stepsInSequance;
     private SensorManager sensorManager;
     private Sensor accSensor;
     private Sensor gyroSensor;
     private ArrayList<Double> gyroSmooth = new ArrayList<>();
     private ArrayList<Double> magSmooth = new ArrayList<>();
+    private ArrayList<Double> magStdList = new ArrayList<>();
 
+    private int rising_edge_step_cache = 0;
+    private int temp_stepCount;
     private int walkingFlag;
     private long timeSinceSwitch = 0L;
     private  long switchThresh = 1000L;
@@ -149,8 +152,9 @@ public class MainActivity extends Activity {
         reset.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                scPeak.resetSteps();
-                scValley.resetSteps();
+                totalSteps = 0;
+                //scPeak.resetSteps();
+                //scValley.resetSteps();
             }
         });
 
@@ -249,7 +253,6 @@ public class MainActivity extends Activity {
                 })
                 .flatMap(notificationObservable -> notificationObservable) // <-- Notification has been set up, now observe value changes.
                 .subscribe(bytes -> {
-                    Log.i("STEPS", "Received " + bytes.length + " bytes");
                     if (!connected) {
                         connected = true;
                         runOnUiThread(() -> {
@@ -262,7 +265,28 @@ public class MainActivity extends Activity {
     }
 
     private int isWalking(List<Double> magnitudes) {
-
+        List<Double> slicedMags;
+        final int start = (mags.size() > 10) ? mags.size() - 10 : 0;
+        slicedMags = magnitudes.subList(start, magnitudes.size());
+        int thresh = 0;
+        int rising = 0;
+        double prev_std = 0;
+        for (double std : slicedMags) {
+            if (std > 0.05) {
+                thresh++;
+            }
+            if (std > prev_std) {
+                rising++;
+            }
+            prev_std = std;
+        }
+        if (thresh > 5) {
+            return 2;
+        } else if (rising > 8) {
+            return 1;
+        }
+        return 0;
+        /*
         double mag_th = 1.2;
         List<Double> slicedMags = magnitudes;
         if (magnitudes.size() > 10) {
@@ -273,7 +297,7 @@ public class MainActivity extends Activity {
                 return 1;
             }
         }
-        return 0;
+        */
     }
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
 
@@ -294,16 +318,9 @@ public class MainActivity extends Activity {
         return buf;
     }
     private void handleRawPacket(final byte[] bytes) {
-        if (init_time==0.0) {
-            init_time = System.currentTimeMillis();
-        } else {
-            time_passed =(System.currentTimeMillis() - init_time);
-            Log.d("TimePassed", time_passed/1e3+"");
-        }
-        init_time = System.currentTimeMillis();
-        ByteBuffer buf = bytesToInt(bytes,0);
-        double mag =  buf.getInt()/1e6;
-        double gyro =  buf.getInt()/1e8;
+        ByteBuffer buf = bytesToInt(bytes, 0);
+        double mag = buf.getInt() / 1e6;
+        double gyro = buf.getInt() / 1e8;
         gyroSmooth.add(gyro);
         if (gyroSmooth.size() > 3) {
             gyroSmooth.remove(0);
@@ -312,30 +329,63 @@ public class MainActivity extends Activity {
         for (double g : gyroSmooth) {
             sum += g;
         }
-        final double averageGyro = sum/3;
+        final double averageGyro = sum / 3;
         mags.add(mag);
-        int moving = this.isWalking(mags);
-        if ( moving == 1) {
-            scPeak.stepDetection(averageGyro, (double) System.currentTimeMillis());
-            scValley.stepDetection(averageGyro*-1, (double) System.currentTimeMillis());
+        final int start = (mags.size() > 10) ? mags.size() - 10 : 0;
+        List<Double> mags_slice = mags.subList(start, mags.size() - 1);
+        final double mag_sd = StepCounter.sd(mags_slice, StepCounter.calculateAverage(mags_slice));
+        magStdList.add(mag_sd);
+        int moving = this.isWalking(magStdList);
+        if (moving > 0) {
+            boolean peakStep = scPeak.stepDetection(averageGyro, (double) System.currentTimeMillis());
+            boolean valleyStep = scValley.stepDetection(averageGyro * -1, (double) System.currentTimeMillis());
+            if (moving == 1 && (peakStep || valleyStep)){
+                rising_edge_step_cache += 1;
+                Log.d("STEP","Cache="+rising_edge_step_cache);
+            } else {
+                // if 500 ms passes without a step, don't count, only count if 3 in sequqnce
+                if (peakStep || valleyStep) {
+                    if (walkingFlag == 1) {
+                        totalSteps += 1;
+                    } else {
+                        init_time = System.currentTimeMillis();
+                        temp_stepCount += 1;
+                    }
+                } else if (System.currentTimeMillis() - init_time > 1000 && walkingFlag == 0) {
+                    init_time = System.currentTimeMillis();
+                    temp_stepCount = 0;
+                    walkingFlag = 0;
+                    rising_edge_step_cache = 0;
+                }
+                if (temp_stepCount >= 3 && walkingFlag == 0) {
+                    walkingFlag = 1;
+                    totalSteps += temp_stepCount;
+                    totalSteps += rising_edge_step_cache;
+                    Log.d("STEP","Cache2="+rising_edge_step_cache);
 
+                    rising_edge_step_cache = 0;
+                    temp_stepCount = 0;
+                }
+            }
+        } else {
+            temp_stepCount = 0;
+            walkingFlag = 0;
+            rising_edge_step_cache = 0;
         }
         counter += 1;
         runOnUiThread(() -> {
-            seriesY.appendData(new DataPoint(inputCounter, mag),true,500);
+            seriesY.appendData(new DataPoint(inputCounter, mag_sd),true,500);
             seriesX.appendData(new DataPoint(inputCounter, averageGyro/3),true,500);
             seriesZ.appendData(new DataPoint(inputCounter, -1*averageGyro/3),true,500);
 
             inputCounter+=1;
-            final int totalSteps = scPeak.getCount() + scValley.getCount();
             stepView.setText(""+totalSteps);
             if (moving == 2) {
                 back.setColorFilter(Color.GREEN);
             } else if (moving == 1){
-                back.setColorFilter(Color.GREEN);
+                back.setColorFilter(Color.YELLOW);
             } else {
                 back.setColorFilter(Color.RED);
-
             }
         });
 
