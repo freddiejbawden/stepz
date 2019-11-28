@@ -59,6 +59,8 @@ public class MainActivity extends Activity {
 
     private static final String ORIENT_BLE_ADDRESS = "FF:37:3C:B4:74:63";
     private static final String CHANNEL_ID = "123456";
+    private final static double walkingFactor = 0.57;
+
 
 
     private static final String MAG_CHARACTERISTIC = "0000a001-0000-1000-8000-00805f9b34fb";
@@ -77,7 +79,6 @@ public class MainActivity extends Activity {
     private TextView distText;
     private TextView calsText;
     private TextView timeText;
-
     private TextView stepView;
     private LineGraphSeries<DataPoint> seriesX;
     private LineGraphSeries<DataPoint> seriesY;
@@ -130,35 +131,11 @@ public class MainActivity extends Activity {
         distText = (TextView) findViewById(R.id.dist_walked_text);
         calsText = (TextView) findViewById(R.id.cals_burned_text);
         timeText = (TextView) findViewById(R.id.time_walked_text);
-
-
-        seriesX = new LineGraphSeries<>();
-        seriesX.setColor(Color.BLUE);
-
-        peakDatapoints = new PointsGraphSeries<>();
+        stepView = (TextView) findViewById(R.id.steps);
 
 
         stride_length = strideLength(height, gender);
-        GraphView graph = findViewById(R.id.graph);
-        Viewport vp = graph.getViewport();
-        vp.setXAxisBoundsManual(true);
-        vp.setMinX(0);
-        vp.setMaxX(100);
-        seriesX = new LineGraphSeries<>();
-        seriesX.setColor(Color.BLUE);
-        seriesY = new LineGraphSeries<>();
-        seriesY.setColor(Color.RED);
-        seriesZ = new LineGraphSeries<>();
-        seriesZ.setColor(Color.GREEN);
 
-
-        graph.addSeries(seriesX);
-        graph.addSeries(seriesY);
-        graph.addSeries(seriesZ);
-
-        Button reset = findViewById(R.id.reset);
-
-        reset.setOnClickListener((View view) -> totalSteps = 0);
 
         getPermissions();
     }
@@ -366,7 +343,7 @@ public class MainActivity extends Activity {
         int moving = this.isWalking(magStdList);
 
         // if we are moving
-        if (moving > 0) {
+        if (moving > 0 && stepSwitch) {
 
             // check if there was a step from either the positive or negated gyro
             boolean peakStep = scPeak.stepDetection(averageGyro, (double) System.currentTimeMillis());
@@ -418,14 +395,13 @@ public class MainActivity extends Activity {
             prevStep = StepType.UNKNOWN;
         }
 
-        Log.d("STEP", ""+sc.getCount());
 
-        if(moving){
+        if(moving>0&stepSwitch){
 
             if (time_walked_init==0.0) {
                 time_walked_init = System.currentTimeMillis();
             } else {
-                time_passed = System.currentTimeMillis() - init_time;
+                time_passed = (long) (System.currentTimeMillis() - time_walked_init);
                 if(time_passed>30000) {
 
                     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
@@ -440,16 +416,20 @@ public class MainActivity extends Activity {
 
             }
 
-            long time = System.currentTimeMillis();
         }
 
 
-        double dist  = distanceTravelled(sc.getCount(),stride_length);
+        double dist  = Math.round(distanceTravelled(totalSteps,stride_length)*10)/10;
 
-        double cals_burned = caloriesBurned(weight, dist, sc.getCount(), stride_length);
+        double cals_burned = Math.round(caloriesBurned(weight, dist, totalSteps, stride_length));
 
-        distText.setText(dist+"");
-        calsText.setText(cals_burned+"");
+        runOnUiThread(() -> {
+            distText.setText(dist+"");
+            calsText.setText(cals_burned+"");
+            stepView.setText(totalSteps+"");
+            timeText.setText(Math.round(time_passed)+"");
+
+        });
 
        
     }
@@ -474,9 +454,9 @@ public class MainActivity extends Activity {
     private double strideLength(Integer height, String gender) {
         switch (gender) {
 
-            case "Male": return height*39.37*0.415;
+            case "Male": return height*0.3937*0.415;
 
-            case "Female": return height*39.37*0.413;
+            case "Female": return height*0.3937*0.413;
 
             default:
                 throw new IllegalStateException("Unexpected value: " + gender);
@@ -484,7 +464,8 @@ public class MainActivity extends Activity {
     }
 
     private double distanceTravelled(Integer steps, double stride_length) {
-        return steps*stride_length;
+        Log.d("distanceTravelled", steps*stride_length*2.54e-5+"");
+        return steps*stride_length*2.54e-5;
     }
 
     /*
@@ -503,7 +484,6 @@ public class MainActivity extends Activity {
         Log.d("STEPSIZE", Double.toString(step_size_feet));
 
 
-        Log.d("FITBIT", Double.toString(stepsCount));
 
 
         double caloriesBurnedPerMile = walkingFactor * (weight * 2.2);

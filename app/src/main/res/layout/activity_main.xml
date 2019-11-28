@@ -65,55 +65,57 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
+
             <ImageView
                 android:id="@+id/distImg"
-                android:layout_width="73dp"
-                android:layout_height="73dp"
-                android:layout_marginStart="40dp"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginStart="56dp"
                 android:src="@drawable/ic_dist_walked"
                 android:tint="#05a8aa"
                 app:layout_constraintBottom_toTopOf="@+id/dist_walked_text"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.802" />
+                app:layout_constraintVertical_bias="0.824" />
 
             <ImageView
                 android:id="@+id/calsImg"
-                android:layout_width="73dp"
-                android:layout_height="73dp"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
                 android:layout_marginTop="60dp"
                 android:src="@drawable/ic_calories"
                 android:tint="#05a8aa"
                 app:layout_constraintBottom_toTopOf="@+id/cals_burned_text"
                 app:layout_constraintEnd_toStartOf="@+id/timeImg"
+                app:layout_constraintHorizontal_bias="0.483"
                 app:layout_constraintStart_toEndOf="@+id/distImg"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.0" />
-
+                app:layout_constraintVertical_bias="0.483" />
 
             <ImageView
                 android:id="@+id/timeImg"
-                android:layout_width="73dp"
-                android:layout_height="73dp"
-                android:layout_marginEnd="40dp"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginEnd="48dp"
                 android:src="@drawable/ic_icon"
                 android:tint="#05a8aa"
                 app:layout_constraintBottom_toTopOf="@+id/time_walked_text"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.786" />
-
+                app:layout_constraintVertical_bias="0.824" />
 
             <TextView
                 android:id="@+id/dist_walked_text"
-                android:layout_width="73dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="32dp"
-                android:layout_marginStart="40dp"
+                android:layout_marginStart="84dp"
+                android:textColor="#E7E7E9"
+                android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.993" />
+                app:layout_constraintVertical_bias="0.986" />
 
             <TextView
                 android:id="@+id/stats_text"
@@ -129,27 +131,31 @@
 
             <TextView
                 android:id="@+id/cals_burned_text"
-                android:layout_width="73dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="32dp"
                 android:layout_marginStart="52dp"
+                android:textColor="#E7E7E9"
+                android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@+id/time_walked_text"
-                app:layout_constraintHorizontal_bias="0.066"
+                app:layout_constraintHorizontal_bias="0.34"
                 app:layout_constraintStart_toEndOf="@+id/dist_walked_text"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.993" />
+                app:layout_constraintVertical_bias="0.986" />
 
             <TextView
                 android:id="@+id/time_walked_text"
-                android:layout_width="73dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="32dp"
-                android:layout_marginEnd="40dp"
+                android:layout_marginEnd="72dp"
+                android:textColor="#E7E7E9"
+                android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.993" />
+                app:layout_constraintVertical_bias="0.986" />
 
         </android.support.constraint.ConstraintLayout>
 

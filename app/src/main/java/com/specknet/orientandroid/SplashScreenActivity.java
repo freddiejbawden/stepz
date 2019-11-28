@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 
 public class SplashScreenActivity extends AppCompatActivity {
 
@@ -17,11 +18,13 @@ public class SplashScreenActivity extends AppCompatActivity {
 
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean init  = preferences.getBoolean("Init", false);
+        Log.d("SplashScreen", init+"");
 
         if(init) {
-            startActivity(new Intent(SplashScreenActivity.this, MainActivity.class));
-        } else {
             startActivity(new Intent(SplashScreenActivity.this, SexActivity.class));
+
+        } else {
+            startActivity(new Intent(SplashScreenActivity.this, MainActivity.class));
         }
 
     }
