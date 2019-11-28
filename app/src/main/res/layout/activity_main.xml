@@ -1,90 +1,159 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<android.support.constraint.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    android:id="@+id/background"
+    android:background="@drawable/background">
 
-    <LinearLayout
-        android:id="@+id/background"
+
+    <TextView
+        android:id="@+id/steps"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="168dp"
+        android:fontFamily="sans-serif-smallcaps"
+        android:text="----"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
+        android:textColor="#E7E7E9"
+        android:textSize="72dp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@+id/steps2"
+        tools:layout_editor_absoluteX="-7dp" />
 
+    <TextView
+        android:id="@+id/steps2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-smallcaps"
+        android:text="Steps"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Small"
+        android:textColor="#F8F8F8"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="0dp" />
 
-        <TextView
-            android:id="@+id/steps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-smallcaps"
-            android:text="----"
-            android:textAlignment="center"
-            android:textAppearance="@style/TextAppearance.AppCompat.Large"
-            android:textSize="72dp"
-            android:textStyle="bold" />
+    <Button
+        android:id="@+id/onOff"
+        android:layout_width="187dp"
+        android:layout_height="61dp"
+        android:layout_marginBottom="80dp"
+        android:background="@drawable/roundedcorner"
+        app:layout_constraintBottom_toTopOf="@+id/cardView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.504"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/steps" />
 
-        <TextView
-            android:id="@+id/steps2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:fontFamily="sans-serif-smallcaps"
-            android:text="Steps"
-            android:textAlignment="center"
-            android:textAppearance="@style/TextAppearance.AppCompat.Small" />
-
+    <android.support.v7.widget.CardView
+        android:id="@+id/cardView"
+        android:layout_width="match_parent"
+        android:layout_height="199dp"
+        app:cardBackgroundColor="@color/cardview_shadow_end_color"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
 
         <android.support.constraint.ConstraintLayout
-            android:id="@+id/linearLayout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:baselineAligned="false"
-            android:textAlignment="center">
-
-            <TextView
-                android:id="@+id/textView"
-                android:layout_width="wrap_content"
-                android:layout_height="0dp"
-                android:text="Moving:   "
-                android:textAlignment="center"
-                app:layout_constraintBottom_toBottomOf="@+id/movingIndicator"
-                app:layout_constraintEnd_toStartOf="@+id/movingIndicator"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/movingIndicator" />
+            android:layout_height="match_parent">
 
             <ImageView
-                android:id="@+id/movingIndicator"
-                android:layout_width="0dp"
-                android:layout_height="30dp"
-                android:src="@android:color/holo_red_dark"
+                android:id="@+id/distImg"
+                android:layout_width="73dp"
+                android:layout_height="73dp"
+                android:layout_marginStart="40dp"
+                android:src="@drawable/ic_dist_walked"
+                android:tint="#05a8aa"
+                app:layout_constraintBottom_toTopOf="@+id/dist_walked_text"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.802" />
+
+            <ImageView
+                android:id="@+id/calsImg"
+                android:layout_width="73dp"
+                android:layout_height="73dp"
+                android:layout_marginTop="60dp"
+                android:src="@drawable/ic_calories"
+                android:tint="#05a8aa"
+                app:layout_constraintBottom_toTopOf="@+id/cals_burned_text"
+                app:layout_constraintEnd_toStartOf="@+id/timeImg"
+                app:layout_constraintStart_toEndOf="@+id/distImg"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.0" />
+
+
+            <ImageView
+                android:id="@+id/timeImg"
+                android:layout_width="73dp"
+                android:layout_height="73dp"
+                android:layout_marginEnd="40dp"
+                android:src="@drawable/ic_icon"
+                android:tint="#05a8aa"
+                app:layout_constraintBottom_toTopOf="@+id/time_walked_text"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/textView"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.786" />
+
+
+            <TextView
+                android:id="@+id/dist_walked_text"
+                android:layout_width="73dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp"
+                android:layout_marginStart="40dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.993" />
+
+            <TextView
+                android:id="@+id/stats_text"
+                android:layout_width="86dp"
+                android:layout_height="21dp"
+                android:layout_marginStart="16dp"
+                android:fontFamily="sans-serif-smallcaps"
+                android:text="@string/statistics"
+                android:textColor="#F1F1F1"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/cals_burned_text"
+                android:layout_width="73dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp"
+                android:layout_marginStart="52dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/time_walked_text"
+                app:layout_constraintHorizontal_bias="0.066"
+                app:layout_constraintStart_toEndOf="@+id/dist_walked_text"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.993" />
+
+            <TextView
+                android:id="@+id/time_walked_text"
+                android:layout_width="73dp"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp"
+                android:layout_marginEnd="40dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.993" />
 
         </android.support.constraint.ConstraintLayout>
 
-        <Button
-            android:id="@+id/reset"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Reset steps" />
+    </android.support.v7.widget.CardView>
 
+</android.support.constraint.ConstraintLayout>
 
-        <com.jjoe64.graphview.GraphView
-            android:id="@+id/graph"
-            android:layout_width="match_parent"
-            android:layout_height="500dp" />
-
-        <Button
-            android:id="@+id/onOff"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_weight="1"
-            android:text="Button" />
-
-    </LinearLayout>
-</ScrollView>
