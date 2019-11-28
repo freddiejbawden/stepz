@@ -105,6 +105,9 @@ public class MainActivity extends Activity {
     private int rising_edge_step_cache = 0;
     private int temp_stepCount;
     private int walkingFlag;
+
+    private StepType prevStep = StepType.UNKNOWN;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -183,6 +186,9 @@ public class MainActivity extends Activity {
         EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
     }
 
+    /**
+     * runApp: start BLE client
+     */
     private void runApp() {
         stepView = findViewById(R.id.steps);
 
@@ -241,6 +247,11 @@ public class MainActivity extends Activity {
                         }
                 );
     }
+
+    /**
+     * connectToOrient; connects to device at addr
+     * @param addr; MAC address of the device
+     */
     private void connectToOrient(String addr) {
         RxBleDevice orient_device = rxBleClient.getBleDevice(addr);
         Log.d("BLE", "Connecting");
@@ -262,10 +273,16 @@ public class MainActivity extends Activity {
                 });
     }
 
-    private int isWalking(List<Double> magnitudes) {
+    /**
+     * isWalking: uses the magitude to figure out if we are moving or not
+     *
+     * @param magnitudeStd: a list of magnitideStd
+     * @return
+     */
+    private int isWalking(List<Double> magnitudeStd) {
         List<Double> slicedMags;
-        final int start = (mags.size() > 10) ? mags.size() - 10 : 0;
-        slicedMags = magnitudes.subList(start, magnitudes.size());
+        final int start = (magnitudeStd.size() > 10) ? magnitudeStd.size() - 10 : 0;
+        slicedMags = magnitudeStd.subList(start, magnitudeStd.size());
         int thresh = 0;
         int rising = 0;
         double prev_std = 0;
@@ -278,7 +295,7 @@ public class MainActivity extends Activity {
             }
             prev_std = std;
         }
-        if (thresh > 5) {
+        if (thresh > 6) {
             return 2;
         } else if (rising > 8) {
             return 1;
@@ -294,21 +311,40 @@ public class MainActivity extends Activity {
             if (mag > mag_th) {
                 return 1;
             }
+            }
         }
         */
     }
 
-    public static ByteBuffer bytesToInt(final byte[] array, final int start)
+    /**
+     *
+     * bytesToBuffer, converts a byte array to a Java byte buffer
+     *
+     * @param array; a byte array
+     * @param start; the position to start our buffer at
+     * @return ByteBuffer cotnaining array, beginning at start
+     */
+    public static ByteBuffer bytesToBuffer(final byte[] array, final int start)
     {
         final ByteBuffer buf = ByteBuffer.wrap(array); // big endian by default
         buf.order(ByteOrder.LITTLE_ENDIAN);
         buf.position(start);
         return buf;
     }
+
+    /**
+     *  Handles the recieivng of data from the sensor
+     *  @param bytes a collection of bytes
+     *
+     */
+
     private void handleRawPacket(final byte[] bytes) {
-        ByteBuffer buf = bytesToInt(bytes, 0);
+
+        ByteBuffer buf = bytesToBuffer(bytes, 0);
         double mag = buf.getInt() / 1e6;
         double gyro = buf.getInt() / 1e8;
+
+        // Smooth the gyroscope data
         gyroSmooth.add(gyro);
         if (gyroSmooth.size() > 3) {
             gyroSmooth.remove(0);
@@ -318,47 +354,68 @@ public class MainActivity extends Activity {
             sum += g;
         }
         final double averageGyro = sum / 3;
+
+        // Calculate new std value
         mags.add(mag);
         final int start = (mags.size() > 10) ? mags.size() - 10 : 0;
         List<Double> mags_slice = mags.subList(start, mags.size() - 1);
         final double mag_sd = StepCounter.sd(mags_slice, StepCounter.calculateAverage(mags_slice));
         magStdList.add(mag_sd);
+
+        // check if we are moving according to the std
         int moving = this.isWalking(magStdList);
+
+        // if we are moving
         if (moving > 0) {
+
+            // check if there was a step from either the positive or negated gyro
             boolean peakStep = scPeak.stepDetection(averageGyro, (double) System.currentTimeMillis());
             boolean valleyStep = scValley.stepDetection(averageGyro * -1, (double) System.currentTimeMillis());
+
+            // if we are on the rising edge, and a step has happened, add it cache it
             if (moving == 1 && (peakStep || valleyStep)){
                 rising_edge_step_cache += 1;
-                Log.d("STEP","Cache="+rising_edge_step_cache);
-            } else {
-                // if 500 ms passes without a step, don't count, only count if 3 in sequqnce
-                if (peakStep || valleyStep) {
+            } else if (moving == 2) {
+                Log.d("STEP", ""+prevStep);
+                // if a step occured count it
+                if (peakStep && prevStep != StepType.PEAK || valleyStep && prevStep != StepType.VALLEY) {
                     if (walkingFlag == 1) {
                         totalSteps += 1;
+                        init_time = System.currentTimeMillis();
                     } else {
                         init_time = System.currentTimeMillis();
                         temp_stepCount += 1;
                     }
-                } else if (System.currentTimeMillis() - init_time > 1000 && walkingFlag == 0) {
+                } else if (System.currentTimeMillis() - init_time > 1000 && walkingFlag == 1) {
+                    // not step occured and it has been longer than 1000 milliseconds since the last step
+                    // then reset
                     init_time = System.currentTimeMillis();
                     temp_stepCount = 0;
                     walkingFlag = 0;
                     rising_edge_step_cache = 0;
+                    prevStep = StepType.UNKNOWN;
                 }
+
+                // if our step count is larger than 3, and we aren't walking, trigger a WD
                 if (temp_stepCount >= 3 && walkingFlag == 0) {
                     walkingFlag = 1;
                     totalSteps += temp_stepCount;
                     totalSteps += rising_edge_step_cache;
-                    Log.d("STEP","Cache2="+rising_edge_step_cache);
-
                     rising_edge_step_cache = 0;
                     temp_stepCount = 0;
                 }
             }
-        } else {
+            if (peakStep) {
+                prevStep = StepType.PEAK;
+            } else if (valleyStep && !peakStep) {
+                prevStep = StepType.VALLEY;
+            }
+        } else if (System.currentTimeMillis() - init_time > 1000) {
+            // if time since last step is > 1000 then cancel
             temp_stepCount = 0;
             walkingFlag = 0;
             rising_edge_step_cache = 0;
+            prevStep = StepType.UNKNOWN;
         }
 
         Log.d("STEP", ""+sc.getCount());
@@ -394,22 +451,7 @@ public class MainActivity extends Activity {
         distText.setText(dist+"");
         calsText.setText(cals_burned+"");
 
-        runOnUiThread(() -> {
-            seriesY.appendData(new DataPoint(inputCounter, mag_sd),true,500);
-            seriesX.appendData(new DataPoint(inputCounter, averageGyro/3),true,500);
-            seriesZ.appendData(new DataPoint(inputCounter, -1*averageGyro/3),true,500);
-
-            inputCounter+=1;
-            stepView.setText(""+totalSteps);
-            if (moving == 2) {
-                back.setColorFilter(Color.GREEN);
-            } else if (moving == 1){
-                back.setColorFilter(Color.YELLOW);
-            } else {
-                back.setColorFilter(Color.RED);
-            }
-        });
-
+       
     }
 
 
