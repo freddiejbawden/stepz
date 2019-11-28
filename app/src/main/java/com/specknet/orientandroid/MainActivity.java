@@ -5,11 +5,13 @@ import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.text.Layout;
 import android.util.Log;
@@ -125,6 +127,15 @@ public class MainActivity extends Activity {
         int uiOpt = View.SYSTEM_UI_FLAG_FULLSCREEN;
         decorView.setSystemUiVisibility(uiOpt);
 
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+
+
+        height = Integer.valueOf(preferences.getString("Height","180"));
+        gender = preferences.getString("Gender","Male");
+        weight = Double.valueOf(preferences.getString("Weight","120"));
+
+
         ctx = this;
 
         distText = (TextView) findViewById(R.id.dist_walked_text);
@@ -178,8 +189,10 @@ public class MainActivity extends Activity {
             public void onClick(View view) {
                 stepSwitch = !stepSwitch;
                 if(stepSwitch) {
+                    step_on_off_button.setBackground(getDrawable(R.drawable.roundcornergreen));
                     step_on_off_button.setText(R.string.pause);
                 } else {
+                    step_on_off_button.setBackground(getDrawable(R.drawable.roundedcorner));
                     step_on_off_button.setText(R.string.resume);
 
                 }
@@ -411,9 +424,9 @@ public class MainActivity extends Activity {
     private double strideLength(Integer height, String gender) {
         switch (gender) {
 
-            case "Male": return height*0.415;
+            case "Male": return height*39.37*0.415;
 
-            case "Female": return height*0.413;
+            case "Female": return height*39.37*0.413;
 
             default:
                 throw new IllegalStateException("Unexpected value: " + gender);
@@ -429,8 +442,6 @@ public class MainActivity extends Activity {
     Calculates the calories burned for the user using his distance, weight and height.
      */
     public double caloriesBurned(double weight, Double distance, Integer stepsCount, double stride_length) {
-
-
 
         double step_size_feet = stride_length / 12; //feet/stride
 

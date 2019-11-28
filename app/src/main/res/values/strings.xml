@@ -6,4 +6,6 @@
     <string name="statistics">Statistics</string>
     <string name="channel_name">move notif</string>
     <string name="channel_description">haven\'t moved notification</string>
+    <string name="weight">Weight</string>
+    <string name="height">Height</string>
 </resources>

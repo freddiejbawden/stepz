@@ -32,7 +32,7 @@ public class SexActivity extends AppCompatActivity {
         femaleBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                editor.putString("Gender","female");
+                editor.putString("Gender","Female");
                 editor.apply();
                 startActivity(new Intent(SexActivity.this, BodyActivity.class));
             }
@@ -42,7 +42,7 @@ public class SexActivity extends AppCompatActivity {
         maleBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                editor.putString("Gender","male");
+                editor.putString("Gender","Male");
                 editor.apply();
                 startActivity(new Intent(SexActivity.this, BodyActivity.class));
             }
