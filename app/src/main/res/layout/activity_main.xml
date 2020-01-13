@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/background"
     android:orientation="vertical"
-    tools:context=".MainActivity"
-    android:id="@+id/background"
-    android:background="@drawable/background">
+    tools:context=".MainActivity">
 
 
     <TextView
@@ -61,61 +60,10 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <android.support.constraint.ConstraintLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-
-            <ImageView
-                android:id="@+id/distImg"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:layout_marginStart="56dp"
-                android:src="@drawable/ic_dist_walked"
-                android:tint="#05a8aa"
-                app:layout_constraintBottom_toTopOf="@+id/dist_walked_text"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.824" />
-
-            <ImageView
-                android:id="@+id/calsImg"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:layout_marginTop="60dp"
-                android:src="@drawable/ic_calories"
-                android:tint="#05a8aa"
-                app:layout_constraintBottom_toTopOf="@+id/cals_burned_text"
-                app:layout_constraintEnd_toStartOf="@+id/timeImg"
-                app:layout_constraintHorizontal_bias="0.483"
-                app:layout_constraintStart_toEndOf="@+id/distImg"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.483" />
-
-            <ImageView
-                android:id="@+id/timeImg"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:layout_marginEnd="48dp"
-                android:src="@drawable/ic_icon"
-                android:tint="#05a8aa"
-                app:layout_constraintBottom_toTopOf="@+id/time_walked_text"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.824" />
-
-            <TextView
-                android:id="@+id/dist_walked_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
-                android:layout_marginStart="84dp"
-                android:textColor="#E7E7E9"
-                android:textSize="18sp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.986" />
+            android:layout_height="match_parent"
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/stats_text"
@@ -125,39 +73,86 @@
                 android:fontFamily="sans-serif-smallcaps"
                 android:text="@string/statistics"
                 android:textColor="#F1F1F1"
-                android:textStyle="bold"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/cals_burned_text"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
-                android:layout_marginStart="52dp"
-                android:textColor="#E7E7E9"
-                android:textSize="18sp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/time_walked_text"
-                app:layout_constraintHorizontal_bias="0.34"
-                app:layout_constraintStart_toEndOf="@+id/dist_walked_text"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.986" />
+                android:layout_marginStart="30dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="30dp"
+                android:baselineAligned="false"
+                android:gravity="center"
+                android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/time_walked_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
-                android:layout_marginEnd="72dp"
-                android:textColor="#E7E7E9"
-                android:textSize="18sp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.986" />
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical">
 
-        </android.support.constraint.ConstraintLayout>
+                    <ImageView
+                        android:id="@+id/timeImg"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:layout_weight="1"
+                        android:src="@drawable/ic_icon"
+                        android:tint="#05a8aa" />
+
+                    <TextView
+                        android:id="@+id/time_walked_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#E7E7E9"
+                        android:textSize="18sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:id="@+id/calsImg"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:src="@drawable/ic_calories"
+                        android:tint="#05a8aa" />
+
+                    <TextView
+                        android:id="@+id/cals_burned_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#E7E7E9"
+                        android:textSize="18sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:id="@+id/distImg"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:src="@drawable/ic_dist_walked"
+                        android:tint="#05a8aa" />
+
+                    <TextView
+                        android:id="@+id/dist_walked_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#E7E7E9"
+                        android:textSize="18sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
 
     </android.support.v7.widget.CardView>
 

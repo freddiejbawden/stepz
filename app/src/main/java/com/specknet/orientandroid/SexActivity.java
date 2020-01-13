@@ -15,7 +15,7 @@ public class SexActivity extends AppCompatActivity {
 
     private ImageButton femaleBtn;
     private ImageButton maleBtn;
-
+    private Button neitherBtn;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,7 +28,7 @@ public class SexActivity extends AppCompatActivity {
 
         femaleBtn = (ImageButton) findViewById(R.id.femaleButton);
         maleBtn = (ImageButton) findViewById(R.id.maleButton);
-
+        neitherBtn = (Button) findViewById(R.id.noneButton);
         femaleBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -40,6 +40,14 @@ public class SexActivity extends AppCompatActivity {
 
 
         maleBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                editor.putString("Gender","Male");
+                editor.apply();
+                startActivity(new Intent(SexActivity.this, BodyActivity.class));
+            }
+        });
+        neitherBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 editor.putString("Gender","Male");

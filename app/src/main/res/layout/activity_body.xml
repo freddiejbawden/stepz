@@ -34,10 +34,11 @@
 
     <Button
         android:id="@+id/button_continue"
-        android:layout_width="250dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
         android:layout_marginBottom="64dp"
-        android:layout_marginStart="80dp"
         android:background="@drawable/roundedcorner"
         android:text="Continue"
         app:layout_constraintBottom_toBottomOf="parent"

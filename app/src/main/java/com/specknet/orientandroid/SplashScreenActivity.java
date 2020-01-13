@@ -19,13 +19,11 @@ public class SplashScreenActivity extends AppCompatActivity {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         boolean init  = preferences.getBoolean("Init", false);
         Log.d("SplashScreen", init+"");
-
         if(init) {
-            startActivity(new Intent(SplashScreenActivity.this, SexActivity.class));
+            startActivity(new Intent(SplashScreenActivity.this, MainActivity.class));
 
         } else {
-            startActivity(new Intent(SplashScreenActivity.this, MainActivity.class));
+          startActivity(new Intent(SplashScreenActivity.this, SexActivity.class));
         }
-
     }
 }

@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -13,6 +14,7 @@ import android.os.Debug;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.text.Layout;
 import android.util.Log;
 import android.view.View;
@@ -32,6 +34,8 @@ import com.polidea.rxandroidble2.scan.ScanSettings;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -51,6 +55,7 @@ import android.os.IBinder;
 import org.w3c.dom.Text;
 
 import static java.lang.Integer.toUnsignedLong;
+import static java.lang.String.format;
 
 public class MainActivity extends Activity {
 
@@ -60,6 +65,7 @@ public class MainActivity extends Activity {
     private static final String ORIENT_BLE_ADDRESS = "FF:37:3C:B4:74:63";
     private static final String CHANNEL_ID = "123456";
     private final static double walkingFactor = 0.57;
+    private static NumberFormat formatter = new DecimalFormat("#0.000");
 
 
 
@@ -83,7 +89,7 @@ public class MainActivity extends Activity {
     private LineGraphSeries<DataPoint> seriesX;
     private LineGraphSeries<DataPoint> seriesY;
     private LineGraphSeries<DataPoint> seriesZ;
-
+    private long timeWalked;
     private int totalSteps;
     private int inputCounter = 0;
     private final int RC_LOCATION_AND_STORAGE = 1;
@@ -113,13 +119,13 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        View decorView = getWindow().getDecorView();
-        int uiOpt = View.SYSTEM_UI_FLAG_FULLSCREEN;
-        decorView.setSystemUiVisibility(uiOpt);
+       // View decorView = getWindow().getDecorView();
+       // int uiOpt = View.SYSTEM_UI_FLAG_FULLSCREEN;
+        //decorView.setSystemUiVisibility(uiOpt);
 
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
-
+        createNotificationChannel();
 
         height = Integer.valueOf(preferences.getString("Height","180"));
         gender = preferences.getString("Gender","Male");
@@ -396,38 +402,57 @@ public class MainActivity extends Activity {
         }
 
 
-        if(moving>0&stepSwitch){
+        if(moving != 2 && stepSwitch){
 
             if (time_walked_init==0.0) {
                 time_walked_init = System.currentTimeMillis();
             } else {
                 time_passed = (long) (System.currentTimeMillis() - time_walked_init);
-                if(time_passed>30000) {
+                Log.d("TIME", time_passed+"");
+                if(time_passed>60000) {
+                    Log.d("TIME", "noftify!");
+                    Intent fullScreenIntent = new Intent(this, MainActivity.class);
+                    PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(this, 0,
+                            fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
 
                     NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                             .setSmallIcon(R.drawable.ic_happy)
                             .setContentTitle("Movement alert!")
-                            .setContentText("You haven't moved in " + time_passed + "!")
+                            .setContentText("You haven't moved in " + Math.round(time_passed/(1000*60)) + "minutes !")
                             .setStyle(new NotificationCompat.BigTextStyle()
-                                    .bigText("Much longer text that cannot fit one line..."))
-                            .setPriority(NotificationCompat.PRIORITY_HIGH);
+                                    .bigText("Get up and move around!"))
+                            .setPriority(NotificationCompat.PRIORITY_HIGH)
+                            .setFullScreenIntent(fullScreenPendingIntent, true);
+                    NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+                    notificationManager.notify(0, builder.build());
+                    time_walked_init = System.currentTimeMillis();
+
+
 
                 }
 
             }
 
+        } else {
+            // if moving
+            if( time_walked_init != 0) {
+                timeWalked += System.currentTimeMillis() - time_walked_init;
+            }
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+            notificationManager.cancel(0);
+            time_walked_init = System.currentTimeMillis();
         }
 
 
-        double dist  = Math.round(distanceTravelled(totalSteps,stride_length)*10)/10;
-
+        double dist  = distanceTravelled(totalSteps,stride_length);
         double cals_burned = Math.round(caloriesBurned(weight, dist, totalSteps, stride_length));
 
         runOnUiThread(() -> {
-            distText.setText(dist+"");
-            calsText.setText(cals_burned+"");
+            distText.setText(format("%s km",formatter.format(dist)));
+            calsText.setText(cals_burned+" kcal");
             stepView.setText(totalSteps+"");
-            timeText.setText(Math.round(time_passed)+"");
+            timeText.setText(Math.round(timeWalked/(60*1000))+" mins");
 
         });
 
@@ -441,7 +466,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = getString(R.string.channel_name);
             String description = getString(R.string.channel_description);
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
             channel.setDescription(description);
             // Register the channel with the system; you can't change the importance
